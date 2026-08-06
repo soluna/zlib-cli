@@ -37,9 +37,9 @@ temporarily or permanently restrict participation. Severe or repeated violations
 stronger action. Maintainers are also bound by this code.
 
 如需私密报告行为问题，可使用
-[GitHub 私密报告](https://github.com/soluna/zlib-cli/security/advisories/new)，标题注明
+[GitHub 私密报告](https://github.com/soluna/zlib-anna-skill/security/advisories/new)，标题注明
 `Conduct report`；不要在公开 Issue 中放入敏感细节。
 
 For a confidential conduct report, use
-[GitHub private reporting](https://github.com/soluna/zlib-cli/security/advisories/new) with
+[GitHub private reporting](https://github.com/soluna/zlib-anna-skill/security/advisories/new) with
 `Conduct report` in the title. Do not put sensitive details in a public issue.

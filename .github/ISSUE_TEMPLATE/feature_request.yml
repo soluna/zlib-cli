@@ -15,7 +15,7 @@ body:
     id: proposal
     attributes:
       label: Proposed solution / 建议方案
-      description: What should zlib-cli do? / 希望项目怎么做？
+      description: What should zlib-anna-skill do? / 希望项目怎么做？
     validations:
       required: true
   - type: dropdown
@@ -23,11 +23,11 @@ body:
     attributes:
       label: Area / 范围
       options:
-        - Agent / SKILL.md
-        - CLI UX
+        - Agent workflow / SKILL.md
+        - Runtime bootstrap
         - Z-Library source
         - Anna's Archive source
-        - Packaging / install
+        - Skill installation
         - Tests / CI
         - Documentation
         - Other

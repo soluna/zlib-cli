@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Agent-friendly Z-Library / Anna's Archive CLI."""
+"""Deterministic execution engine bundled with zlib-anna-skill."""
 
 from __future__ import annotations
 
@@ -20,7 +20,10 @@ from urllib.parse import unquote, urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from network_safety import (
+from . import SCHEMA_VERSION, SKILL_VERSION, annas_archive
+from .network_safety import (
+    ALLOW_INSECURE_HTTP_ENV,
+    LEGACY_ALLOW_INSECURE_HTTP_ENV,
     UnsafeUrlError,
     env_flag,
     safe_get,
@@ -28,17 +31,11 @@ from network_safety import (
     validate_http_url,
 )
 
-try:
-    import annas_archive
-
-    ANNAS_AVAILABLE = True
-except ImportError:
-    annas_archive = None
-    ANNAS_AVAILABLE = False
+ANNAS_AVAILABLE = True
 
 
 def default_config_dir() -> Path:
-    override = os.environ.get("ZLIB_CLI_CONFIG_DIR")
+    override = os.environ.get("ZLIB_ANNA_CONFIG_DIR") or os.environ.get("ZLIB_CLI_CONFIG_DIR")
     if override:
         return Path(override).expanduser()
     xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
@@ -50,9 +47,6 @@ def default_config_dir() -> Path:
 CONFIG_DIR = default_config_dir()
 CONFIG_FILE = CONFIG_DIR / "config.json"
 DEFAULT_DOWNLOAD_DIR = Path.home() / "Books"
-APP_VERSION = "0.1.0"
-SCHEMA_VERSION = "1"
-
 ENTRY_POINTS = [
     "https://1lib.sk/eapi/info/domains",
     "https://singlelogin.rs/eapi/info/domains",
@@ -61,6 +55,7 @@ ENTRY_POINTS = [
 FALLBACK_ZLIB_DOMAINS = ["z-library.sk", "1lib.sk", "article.sk", "articles.sk"]
 ZLIB_DOMAIN_ENV_KEYS = ("ZLIBRARY_DOMAIN", "ZLIB_DOMAIN")
 ALLOW_UNTRUSTED_ZLIB_DOMAIN_ENV = "ZLIBRARY_ALLOW_UNTRUSTED_DOMAIN"
+RUNNER_COMMAND = "python3 {baseDir}/scripts/run.py"
 
 HEADERS = {
     "Content-Type": "application/x-www-form-urlencoded",
@@ -131,7 +126,7 @@ def anna_base_origin() -> str | None:
     return url_origin(value) if value else None
 
 
-class CliError(Exception):
+class SkillError(Exception):
     def __init__(
         self,
         code: str,
@@ -202,23 +197,23 @@ def emit_json(payload: dict[str, Any]) -> None:
 
 
 def fail(code: str, message: str, **kwargs: Any) -> None:
-    raise CliError(code, message, **kwargs)
+    raise SkillError(code, message, **kwargs)
 
 
 def ok_payload(**kwargs: Any) -> dict[str, Any]:
     return {
         "ok": True,
         "schema_version": SCHEMA_VERSION,
-        "cli_version": APP_VERSION,
+        "skill_version": SKILL_VERSION,
         **kwargs,
     }
 
 
-def error_payload(error: CliError) -> dict[str, Any]:
+def error_payload(error: SkillError) -> dict[str, Any]:
     return {
         "ok": False,
         "schema_version": SCHEMA_VERSION,
-        "cli_version": APP_VERSION,
+        "skill_version": SKILL_VERSION,
         "error": error.to_dict(),
     }
 
@@ -559,15 +554,15 @@ def init_zlibrary(
     if str(script_dir) not in sys.path:
         sys.path.insert(0, str(script_dir))
 
-    from Zlibrary import Zlibrary
+    from .zlibrary import Zlibrary
 
     if require_auth and not has_zlib_auth(cfg):
         fail(
             "AUTH_REQUIRED",
             "Z-Library credentials are not configured.",
             suggestions=[
-                "Run: zlib-cli auth login zlib --email <you@example.com>",
-                "Or use: zlib-cli search <query> --source anna --json",
+                "Run: python3 {baseDir}/scripts/run.py auth login zlib --email <you@example.com>",
+                "Or use: python3 {baseDir}/scripts/run.py search <query> --source anna --json",
             ],
         )
 
@@ -584,7 +579,7 @@ def init_zlibrary(
             "SOURCE_UNAVAILABLE",
             "No reachable Z-Library mirror was found.",
             suggestions=[
-                "Run: zlib-cli doctor --json",
+                "Run: python3 {baseDir}/scripts/run.py doctor --json",
                 "Configure a proxy with HTTPS_PROXY or ALL_PROXY if your network blocks access.",
                 "Try Anna's Archive with: --source anna",
                 "Only trust a manually supplied domain after verifying it independently.",
@@ -608,8 +603,8 @@ def init_zlibrary(
             "AUTH_INVALID",
             "Saved Z-Library token is invalid or expired.",
             suggestions=[
-                "Run: zlib-cli auth login zlib --email <you@example.com>",
-                "Run: zlib-cli auth logout to clear the saved token.",
+                "Run: python3 {baseDir}/scripts/run.py auth login zlib --email <you@example.com>",
+                "Run: python3 {baseDir}/scripts/run.py auth logout to clear the saved token.",
             ],
             details={"domain": working},
         )
@@ -700,7 +695,7 @@ def search_zlib(
             fail(
                 "AUTH_REQUIRED",
                 "Z-Library search requires login.",
-                suggestions=["Run: zlib-cli auth login zlib --email <you@example.com>"],
+                suggestions=[f"Run: {RUNNER_COMMAND} auth login zlib --email <you@example.com>"],
             )
         return [], status
 
@@ -769,7 +764,7 @@ def search_anna(args: argparse.Namespace) -> tuple[list[dict[str, Any]], SourceS
                 suggestions=[
                     "Set ANNAS_BASE_URL to a reachable mirror.",
                     "Configure HTTPS_PROXY or ALL_PROXY if your network blocks access.",
-                    "Run: zlib-cli doctor --json",
+                    "Run: python3 {baseDir}/scripts/run.py doctor --json",
                 ],
                 details=status.details,
             )
@@ -853,7 +848,7 @@ def cmd_search(args: argparse.Namespace) -> dict[str, Any]:
     if source in ("zlib", "all"):
         try:
             zlib_results, zlib_status = search_zlib(args, cfg)
-        except CliError as exc:
+        except SkillError as exc:
             if source == "zlib":
                 raise
             zlib_results = []
@@ -887,7 +882,7 @@ def cmd_search(args: argparse.Namespace) -> dict[str, Any]:
     if source in ("anna", "all"):
         try:
             anna_results, anna_status = search_anna(args)
-        except CliError:
+        except SkillError:
             if source == "anna":
                 raise
             anna_results = []
@@ -905,8 +900,9 @@ def cmd_search(args: argparse.Namespace) -> dict[str, Any]:
             "NO_SOURCES_AVAILABLE",
             "No requested source is available.",
             suggestions=[
-                "Run: zlib-cli doctor --json",
-                "Login to Z-Library with: zlib-cli auth login zlib --email <you@example.com>",
+                f"Run: {RUNNER_COMMAND} doctor --json",
+                f"Login to Z-Library with: {RUNNER_COMMAND} auth login zlib "
+                "--email <you@example.com>",
                 "Set ANNAS_BASE_URL if Anna's Archive is blocked.",
             ],
             details={"sources": [status.to_dict() for status in statuses]},
@@ -1473,7 +1469,7 @@ def cmd_resolve(args: argparse.Namespace) -> dict[str, Any]:
                 "Could not resolve Anna's Archive download links.",
                 suggestions=[
                     "Set ANNAS_BASE_URL to a reachable verified mirror.",
-                    "Run: zlib-cli doctor --json",
+                    "Run: python3 {baseDir}/scripts/run.py doctor --json",
                 ],
                 details={"error_type": type(exc).__name__},
             )
@@ -1570,7 +1566,7 @@ def login_zlib(args: argparse.Namespace) -> dict[str, Any]:
     script_dir = Path(__file__).parent.resolve()
     if str(script_dir) not in sys.path:
         sys.path.insert(0, str(script_dir))
-    from Zlibrary import Zlibrary
+    from .zlibrary import Zlibrary
 
     working, checks = find_working_domain(None)
     if not working:
@@ -1680,7 +1676,10 @@ def check_anna() -> SourceStatus:
     try:
         validate_http_url(
             base_url,
-            require_https=not env_flag("ZLIB_CLI_ALLOW_INSECURE_HTTP"),
+            require_https=not env_flag(
+                ALLOW_INSECURE_HTTP_ENV,
+                LEGACY_ALLOW_INSECURE_HTTP_ENV,
+            ),
         )
         resp = requests.get(
             base_url,
@@ -1838,7 +1837,7 @@ def cmd_batch(args: argparse.Namespace) -> dict[str, Any]:
                 else download_anna(args, item_id)
             )
             results.append({"index": index, "input": line, "result": result})
-        except CliError as exc:
+        except SkillError as exc:
             results.append({"index": index, "input": line, "error": exc.to_dict()})
         except Exception as exc:
             results.append(
@@ -1894,20 +1893,22 @@ def publication_year(value: str) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Agent-friendly Z-Library / Anna's Archive CLI",
+        prog="zlib-anna-skill",
+        description="Bundled execution engine for Z-Library and Anna's Archive ebook tasks",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  zlib-cli doctor --json\n"
-            '  zlib-cli search "Python Programming" --source anna --json\n'
-            '  zlib-cli download "anna:<32-character-md5>" --output ~/Books --json\n'
-            "  zlib-cli auth login zlib --email you@example.com\n"
+            f"  {RUNNER_COMMAND} doctor --json\n"
+            f'  {RUNNER_COMMAND} search "Python Programming" --source anna --json\n'
+            f'  {RUNNER_COMMAND} download "anna:<32-character-md5>" '
+            "--output ~/Books --json\n"
+            f"  {RUNNER_COMMAND} auth login zlib --email you@example.com\n"
             "\n"
             "If Z-Library domains are blocked or stale, set ZLIBRARY_DOMAIN to a reachable "
             "mirror and run doctor again."
         ),
     )
-    parser.add_argument("--version", action="version", version=f"%(prog)s {APP_VERSION}")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {SKILL_VERSION}")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     auth_parser = subparsers.add_parser("auth", help="Manage local auth state")
@@ -1932,9 +1933,10 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            '  zlib-cli search "Python" --source anna --json\n'
-            '  zlib-cli search "Clean Code" --source all --ext epub,pdf --json\n'
-            '  zlib-cli search "database systems" --source zlib --lang en --json'
+            f'  {RUNNER_COMMAND} search "Python" --source anna --json\n'
+            f'  {RUNNER_COMMAND} search "Clean Code" --source all '
+            "--ext epub,pdf --json\n"
+            f'  {RUNNER_COMMAND} search "database systems" --source zlib --lang en --json'
         ),
     )
     add_common(search_parser)
@@ -1968,9 +1970,11 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            '  zlib-cli download "anna:<32-character-md5>" --output ~/Books --json\n'
-            '  zlib-cli download "zlib:<book_id>:<hash>" --output ~/Books --json\n'
-            "  zlib-cli download <md5> --source anna --json"
+            f'  {RUNNER_COMMAND} download "anna:<32-character-md5>" '
+            "--output ~/Books --json\n"
+            f'  {RUNNER_COMMAND} download "zlib:<book_id>:<hash>" '
+            "--output ~/Books --json\n"
+            f"  {RUNNER_COMMAND} download <md5> --source anna --json"
         ),
     )
     add_common(download_parser)
@@ -2024,7 +2028,7 @@ def main(argv: list[str] | None = None) -> int:
     except SystemExit as exc:
         exit_code = int(exc.code or 0)
         if exit_code and "--json" in argument_list:
-            error = CliError(
+            error = SkillError(
                 "INVALID_ARGUMENT",
                 "Command-line arguments are invalid; see stderr for usage.",
                 recoverable=True,
@@ -2052,7 +2056,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         commands[args.command](args)
         return 0
-    except CliError as exc:
+    except SkillError as exc:
         if getattr(args, "json", False):
             emit_json(error_payload(exc))
         else:
@@ -2061,7 +2065,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"- {suggestion}", file=sys.stderr)
         return exc.exit_code
     except KeyboardInterrupt:
-        error = CliError(
+        error = SkillError(
             "INTERRUPTED",
             "Command interrupted by the user.",
             recoverable=True,
@@ -2073,15 +2077,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Error [{error.code}]: {error.message}", file=sys.stderr)
         return error.exit_code
     except Exception as exc:
-        if env_flag("ZLIB_CLI_DEBUG"):
+        if env_flag("ZLIB_ANNA_DEBUG", "ZLIB_CLI_DEBUG"):
             raise
-        error = CliError(
+        error = SkillError(
             "UNEXPECTED_ERROR",
             "The command failed unexpectedly without exposing sensitive details.",
             recoverable=False,
             suggestions=[
-                "Run: zlib-cli doctor --json",
-                "Retry with ZLIB_CLI_DEBUG=1 for a traceback.",
+                "Run: python3 {baseDir}/scripts/run.py doctor --json",
+                "Retry with ZLIB_ANNA_DEBUG=1 for a traceback.",
             ],
             details={"error_type": type(exc).__name__},
         )

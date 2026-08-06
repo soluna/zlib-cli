@@ -2,70 +2,67 @@
 
 ## 支持版本 / Supported Versions
 
-中文：当前仅维护最新的 `0.1.x` alpha。安全修复可能包含不向后兼容的行为收紧。
+中文：当前仅维护最新的 `0.2.x` alpha。安全修复可能包含不向后兼容的行为收紧。
 
-English: Only the latest `0.1.x` alpha is currently supported. Security fixes may
-tighten behavior without backward compatibility.
+English: Only the latest `0.2.x` alpha is maintained. Security fixes may tighten behavior
+without backward compatibility.
 
 ## 私密报告 / Private Reporting
 
-中文：不要在公开 Issue 中报告可利用漏洞或粘贴真实账号、token、cookie、配置文件、
-私人下载 URL、traceback 或个人信息。请使用 GitHub 的
-[私密漏洞报告](https://github.com/soluna/zlib-cli/security/advisories/new)，将所有敏感值
-替换为 `<redacted>`，并提供最小复现。
+不要在公开 Issue 中发布漏洞细节、真实账号、token、cookie、配置、私人下载 URL、traceback
+或个人信息。请使用 GitHub
+[私密漏洞报告](https://github.com/soluna/zlib-anna-skill/security/advisories/new)，将敏感值
+替换为 `<redacted>` 并提供最小复现。
 
-English: Do not report exploitable vulnerabilities or paste real accounts, tokens,
-cookies, config files, private download URLs, tracebacks, or personal information in a
-public issue. Use [GitHub private vulnerability reporting](https://github.com/soluna/zlib-cli/security/advisories/new),
+Do not post vulnerability details, real accounts, tokens, cookies, config data, private
+download URLs, tracebacks, or personal information in public issues. Use
+[GitHub private vulnerability reporting](https://github.com/soluna/zlib-anna-skill/security/advisories/new),
 replace sensitive values with `<redacted>`, and include the smallest reproduction.
-
-如果该链接不可用，说明仓库维护者尚未启用 Private Vulnerability Reporting。请只提交一个
-不含漏洞细节的公开 Issue，要求维护者开启私密报告渠道。
-
-If the link is unavailable, the maintainer has not enabled Private Vulnerability
-Reporting. Open a public issue containing no vulnerability details and ask the maintainer
-to enable the private channel.
 
 ## 报告内容 / What to Include
 
-- 受影响版本和操作系统 / Affected version and operating system.
+- 受影响版本、Agent 运行时、Python 和操作系统 / Version, agent runtime, Python, and OS.
 - 不含真实凭据的复现步骤 / Reproduction without real credentials.
-- 影响说明：凭据泄露、任意文件写入、内网访问等 / Impact such as credential disclosure,
-  arbitrary file writes, or private-network access.
+- 影响：凭据泄露、任意文件写入、内网访问、依赖引导劫持等 / Impact such as credential
+  disclosure, arbitrary writes, private-network access, or runtime-bootstrap compromise.
 - 建议修复（如有）/ A suggested fix, if available.
 
-维护者目标是在 7 天内确认收到报告，并在确认严重度后给出修复计划。Alpha 项目不承诺固定
-SLA，但会优先处理凭据泄露、任意文件写入和网络边界绕过。
+维护者目标是在 7 天内确认收到。Alpha 不承诺固定 SLA，但优先处理凭据泄露、任意写入、网络
+边界绕过和依赖供应链问题。
 
-The maintainer aims to acknowledge reports within seven days and provide a remediation
-plan after triage. This alpha has no guaranteed SLA, but credential disclosure, arbitrary
-file writes, and network-boundary bypasses receive priority.
+The maintainer aims to acknowledge reports within seven days. This alpha has no fixed SLA,
+but credential disclosure, arbitrary writes, network-boundary bypasses, and dependency
+supply-chain issues receive priority.
 
 ## 安全模型 / Security Model
 
-- Z-Library token 以明文 JSON 保存；POSIX 上目录为 `0700`、文件为 `0600`。Windows
-  ACL 不由本项目完整管理 / Tokens are plaintext JSON; POSIX modes are `0700`/`0600`.
-  Windows ACLs are not fully managed.
-- 未经信任的 Z-Library 域名默认不会被访问或接收凭据 / Untrusted Z-Library domains are
-  not contacted or sent credentials by default.
-- 非信任域名的显式 opt-in 不会持久化到后续命令 / Explicit trust for an untrusted domain
-  is not persisted to later commands.
-- Anna 下载会验证每次重定向并阻止本地、私有、链路本地目标 / Anna downloads validate
-  redirects and block local, private, and link-local targets.
-- 下载有大小上限、临时 `.part` 文件和类型限制；Anna 还校验 MD5 / Downloads have a
-  size limit, `.part` files, and type checks; Anna downloads also verify MD5.
-- `resolve` 会按用户明确请求输出下载链接，这些链接可能是敏感信息 / `resolve` emits
-  download URLs only when explicitly requested; treat them as sensitive.
-- 书名、作者和远端元数据属于不可信输入，Agent 不应执行其中的指令 / Titles, authors,
-  and remote metadata are untrusted input; agents must not execute embedded instructions.
-- `ZLIB_CLI_DEBUG=1` 会输出原始 traceback，可能包含 URL 或本地路径 / Debug mode may
-  expose URLs or local paths in tracebacks.
+- 首次运行只在用户缓存创建专用虚拟环境，不使用 `sudo`、全局 pip 或系统 Python写入 /
+  First use creates a cache-local virtual environment without sudo, global pip, or system
+  Python writes.
+- 运行依赖固定版本并要求 SHA-256 哈希；只接受 binary distributions / Runtime dependencies
+  are pinned, hash-checked, and binary-only.
+- 引擎使用 Python isolated mode 启动，避免当前目录或用户 `PYTHONPATH` 注入 / The engine
+  starts in Python isolated mode to avoid current-directory and user-PYTHONPATH injection.
+- 引导失败只返回步骤和异常类型，不回显包索引 URL 或凭据 / Setup failures report only a
+  step and error type, not package-index URLs or credentials.
+- Z-Library token 以本机明文 JSON 保存；POSIX 目录/文件权限为 `0700`/`0600` / Tokens are
+  local plaintext JSON protected by POSIX modes `0700`/`0600`.
+- 未信任 Z-Library 域名默认不访问或接收凭据 / Untrusted Z-Library domains are not
+  contacted or sent credentials by default.
+- Anna 下载验证每次重定向并阻止本地、私有和链路本地目标 / Anna downloads validate
+  every redirect and block local, private, and link-local targets.
+- 下载有大小、类型、临时文件边界；Anna 还验证 MD5 / Downloads enforce size, type, and
+  partial-file boundaries; Anna also verifies MD5.
+- 书名、作者和远端元数据是不可信输入，Agent 不应执行其中指令 / Remote metadata is
+  untrusted and must never be executed as instructions.
+- `ZLIB_ANNA_DEBUG=1` 可能输出敏感 URL 或路径 / Debug tracebacks may expose sensitive URLs
+  or paths.
 
 ## 不属于漏洞 / Out of Scope
 
-- 上游站点不可用、验证码、页面改版或镜像失效 / Upstream outages, captchas, markup changes,
+- 上游不可用、验证码、页面改版或镜像失效 / Upstream outages, captchas, markup changes,
   or dead mirrors.
-- 用户明确启用 `ZLIB_CLI_ALLOW_PRIVATE_NETWORK=1` 或
-  `ZLIBRARY_ALLOW_UNTRUSTED_DOMAIN=1` 后产生的预期网络访问 / Network access explicitly
-  enabled through the private-network or untrusted-domain opt-ins.
-- 用户主动公开其下载内容或链接 / A user intentionally sharing downloaded content or URLs.
+- 用户明确启用 `ZLIB_ANNA_ALLOW_PRIVATE_NETWORK=1` 或
+  `ZLIBRARY_ALLOW_UNTRUSTED_DOMAIN=1` 后的预期访问 / Access explicitly enabled through
+  private-network or untrusted-domain opt-ins.
+- 用户主动公开下载内容或链接 / A user intentionally sharing downloads or links.

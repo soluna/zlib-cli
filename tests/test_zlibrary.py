@@ -10,9 +10,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from Zlibrary import Zlibrary
+from zlib_anna.zlibrary import Zlibrary
 
 
 class TestZlibraryDomain:
@@ -98,7 +98,7 @@ def test_streaming_download_rejects_declared_oversize_before_writing(tmp_path):
             "_Zlibrary__getBookFileInfo",
             return_value=("book.pdf", "https://files.example/book.pdf"),
         ),
-        patch("Zlibrary.safe_get", return_value=context),
+        patch("zlib_anna.zlibrary.safe_get", return_value=context),
     ):
         with pytest.raises(ValueError, match="size limit"):
             z.downloadBookToPath(

@@ -6,7 +6,7 @@ Zlibrary-API / Zlibrary.py
 For more information, see:
 https://github.com/bipinkrish/Zlibrary-API/
 
-Modified by zlib-cli contributors: added dynamic mirrors, timeouts, streaming downloads,
+Modified by zlib-anna-skill contributors: added dynamic mirrors, timeouts, streaming downloads,
 and network-target validation. See THIRD_PARTY_NOTICES.md for the upstream MIT license.
 """
 
@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from network_safety import safe_get, validate_http_url
+from .network_safety import safe_get, validate_http_url
 
 DEFAULT_TIMEOUT = (10, 60)
 DOWNLOAD_TIMEOUT = (10, 300)
