@@ -1,0 +1,42 @@
+name: Feature request / 功能建议
+description: Suggest an improvement / 建议改进
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / 用户问题
+      description: What workflow is difficult or missing? / 哪个流程困难或缺失？
+      placeholder: I want an agent to...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution / 建议方案
+      description: What should zlib-cli do? / 希望项目怎么做？
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area / 范围
+      options:
+        - Agent / SKILL.md
+        - CLI UX
+        - Z-Library source
+        - Anna's Archive source
+        - Packaging / install
+        - Tests / CI
+        - Documentation
+        - Other
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context / 补充信息
+      description: Do not include real accounts, tokens, cookies, or private links. / 不要包含真实账号、token、cookie 或私人链接。
+    validations:
+      required: false

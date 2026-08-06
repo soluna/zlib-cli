@@ -1,0 +1,42 @@
+# Credentials and tokens (contains remix_userkey)
+config.json
+.env
+.env.*
+
+# Downloaded books and partial files
+Books/
+downloads/
+*.part
+*.pdf
+*.epub
+*.mobi
+*.azw
+*.azw3
+*.djvu
+*.cbz
+*.cbr
+*.cb7
+*.fb2
+*.rtf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.*-venv/
+dist/
+build/
+*.egg
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

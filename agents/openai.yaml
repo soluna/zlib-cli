@@ -1,0 +1,7 @@
+interface:
+  display_name: "zlib-cli"
+  short_description: "Search and download ebooks through the CLI"
+  default_prompt: "Use $zlib-cli to search for an ebook and present matching editions before downloading anything."
+
+policy:
+  allow_implicit_invocation: true

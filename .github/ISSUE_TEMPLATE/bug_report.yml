@@ -1,0 +1,64 @@
+name: Bug report / 问题报告
+description: Report a reproducible problem / 报告可复现问题
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please remove or redact real accounts, tokens, cookies, private URLs, and local config contents before posting.
+
+        感谢反馈问题。请在提交前删除或打码真实账号、token、cookie、私人 URL 和本地配置内容。
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary / 问题摘要
+      description: What went wrong? / 发生了什么？
+      placeholder: zlib-cli search/download failed when...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps / 复现步骤
+      description: Include the exact command, but redact secrets. / 提供准确命令并删除敏感值。
+      placeholder: |
+        1. Run `zlib-cli doctor --json`
+        2. Run `zlib-cli search "..." --source anna --json`
+        3. Run `zlib-cli download "anna:..." --json`
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: doctor output / 诊断输出
+      description: Paste redacted `zlib-cli doctor --json` output. / 粘贴已脱敏的诊断输出。
+      render: json
+    validations:
+      required: false
+  - type: textarea
+    id: output
+    attributes:
+      label: Command output / 命令输出
+      description: Paste redacted JSON or stderr. / 粘贴已脱敏的 JSON 或 stderr。
+      render: json
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: zlib-cli version / 版本
+      placeholder: zlib-cli --version
+    validations:
+      required: false
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source / 来源
+      options:
+        - Anna's Archive
+        - Z-Library
+        - Both / all
+        - Unsure
+    validations:
+      required: false
