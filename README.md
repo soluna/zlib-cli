@@ -1,5 +1,32 @@
 # zlib-cli
 
+## 直接让 Agent 安装 / Ask Your Agent to Install
+
+不建议只说“安装这个仓库”，因为 Skill 注册和 `zlib-cli` 命令安装是两个步骤。请把下面
+这句话直接发给具有 GitHub 与终端权限的 Agent：
+
+Do not ask an agent to merely “install this repository”: skill registration and CLI
+installation are separate steps. Send this exact request to an agent that has GitHub and
+terminal access:
+
+> 请帮我安装这个 Agent Skill 及其 CLI：https://github.com/soluna/zlib-cli 。仓库根目录
+> 就是 Skill 目录；请同时安装 `zlib-cli` 命令，并运行 `zlib-cli --version` 和
+> `zlib-cli doctor --json` 验证。安装阶段不要要求我的 Z-Library 账号。
+>
+> Please install both the Agent Skill and CLI from https://github.com/soluna/zlib-cli .
+> The repository root is the skill directory. Also install the `zlib-cli` command, then
+> verify it with `zlib-cli --version` and `zlib-cli doctor --json`. Do not request my
+> Z-Library account during installation.
+
+对于 Codex，Agent 应把仓库根目录作为 `--path .`、Skill 名称作为 `zlib-cli` 安装，然后用
+`pipx` 安装同一仓库中的 Python CLI。只复制 `SKILL.md` 或只运行 `pipx install` 都不算完整
+安装。完整命令、更新方法和其他 Agent 的边界见 [INSTALL.md](INSTALL.md)。
+
+For Codex, the agent should install the repository root with `--path .` and the name
+`zlib-cli`, then use `pipx` to install the Python CLI from the same repository. Copying only
+`SKILL.md` or running only `pipx install` is incomplete. See [INSTALL.md](INSTALL.md) for
+exact commands, updates, and limitations for other agents.
+
 中文 | English
 
 面向 Agent 的电子书搜索与下载 CLI / Skill，支持 Z-Library 与 Anna's Archive。
@@ -81,13 +108,17 @@ python3 -m build
 
 ## Agent Skill 安装 / Agent Skill Installation
 
-中文：Skill 需要完整目录，不能只复制一个脱离目录的代码片段。以 Codex 为例：
+中文：推荐直接使用 README 开头的 Agent 安装指令。手动安装时，Skill 需要完整仓库目录，
+同时还要安装 CLI。以 Codex 为例：
 
-English: Install the skill as a directory. For Codex, one straightforward setup is:
+English: Prefer the agent-install request at the top of this README. For manual setup, keep
+the complete repository as the skill directory and install the CLI as well. For Codex:
 
 ```bash
 git clone https://github.com/soluna/zlib-cli.git ~/.codex/skills/zlib-cli
 pipx install ~/.codex/skills/zlib-cli
+zlib-cli --version
+zlib-cli doctor --json
 ```
 
 其他 Agent 框架请把仓库目录安装到其 Skill 搜索路径，并确保 `zlib-cli` 命令在 Agent
@@ -303,6 +334,7 @@ Automated tests do not access live Z-Library/Anna services or read maintainer cr
 
 ## 项目文档 / Project Documents
 
+- [安装指南 / Installation Guide](INSTALL.md)
 - [贡献指南 / Contributing](CONTRIBUTING.md)
 - [行为准则 / Code of Conduct](CODE_OF_CONDUCT.md)
 - [安全政策 / Security Policy](SECURITY.md)
