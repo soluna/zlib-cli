@@ -4,118 +4,111 @@ Review date / 审查日期: 2026-08-06
 
 ## 结论 / Verdict
 
-中文：当前代码、Skill、测试、打包与中英双语仓库材料达到 `0.1.0` alpha 开源标准。
-本仓库由经过审查的 tracked-file snapshot 建立，不包含前置私有仓库的 Git 历史。仓库已经
-公开，`main` CI、noreply 身份、分支保护、Private Vulnerability Reporting、secret scanning
-和 push protection 均已验证。当前没有开源阻塞项。
+中文：`zlib-anna-skill` 的代码、Skill 结构、自包含运行环境、测试、安全门禁和中英双语
+材料达到 `0.2.0` alpha 开源发布标准。仓库保持独立、干净的公开历史，不包含前置私有仓库
+历史或维护者凭据。当前没有开源阻塞项。
 
-English: The code, Skill, tests, packaging, and bilingual repository materials meet the
-publication bar for a `0.1.0` alpha. This repository starts from an audited tracked-file
-snapshot and contains no predecessor private Git history. It is now public, with green
-`main` CI, noreply-only identity, branch protection, Private Vulnerability Reporting, secret
-scanning, and push protection verified. No open-source blocker remains.
+English: The code, Skill structure, self-contained runtime, tests, security gates, and
+bilingual materials meet the open-source release bar for `0.2.0` alpha. The repository keeps
+an independent clean public history with no predecessor private history or maintainer
+credentials. No open-source blocker remains.
 
 ## 干净仓库边界 / Clean-Repository Boundary
 
-- 只导入 tracked files，不导入 `.git`、refs、PR refs、bundle、缓存、构建产物或本地配置 /
-  Only tracked files were imported; no `.git`, refs, PR refs, bundles, caches, build output,
-  or local configuration were carried over.
-- 新仓库必须使用 GitHub noreply 作者身份 / The new repository must use a GitHub noreply
-  author identity.
-- 不得把任何前置私有仓库添加为 remote 或合并其历史 / Never add a predecessor private
-  repository as a remote or merge its history.
-- 源码和审查过的历史中未发现真实 Z-Library token 或密码 / No real Z-Library token or
-  password was found in the source or audited predecessor history.
+- 只保留审查过的 tracked files，不导入私有 `.git`、refs、bundle、缓存、构建产物或本地
+  配置 / Keep only audited tracked files; never import private history, refs, bundles, caches,
+  build output, or local config.
+- 提交使用 GitHub noreply 身份，`origin` 只指向公开仓库 / Commits use a GitHub noreply
+  identity and `origin` points only to the public repository.
+- 源码与公开历史中未发现真实 Z-Library token、密码或 cookie / No real Z-Library token,
+  password, or cookie was found in source or public history.
 
-## 发布前发现并修复 / Findings Resolved Before Publication
+## 关键问题与处理 / Material Findings and Resolutions
 
-### OSR-001: 不可信域名可能接收 Z-Library token / Untrusted domain credential exposure
+### OSR-001: 双安装面容易半安装 / Two installation surfaces caused partial setup
 
-非内置/非入口发现域名默认不接触，必须由用户显式设置
-`ZLIBRARY_ALLOW_UNTRUSTED_DOMAIN=1`；该授权不会持久化，Skill 禁止 Agent 猜测域名。
+旧版需要同时注册 Skill 和安装全局命令。`0.2.0` 将执行代码、依赖锁和启动器放入同一 Skill
+目录；用户只安装一个 Skill，首次命令自动准备缓存运行环境。
 
-Domains outside the built-in/discovered trust set are blocked unless the user explicitly
-opts in. That trust is not persisted, and the Skill forbids agents from guessing domains.
+The old release required both Skill registration and a global command. `0.2.0` bundles the
+runner, dependency lock, and engine in one Skill; first use prepares a cache-local runtime.
 
-### OSR-002: 搜索和下载可被诱导访问内网 / Search and download could reach private networks
+### OSR-002: 依赖引导与代码注入风险 / Runtime bootstrap and code-injection risk
 
-所有 Anna 搜索、详情、下载 URL 与每次重定向均经过校验，阻止 localhost、私有/链路本地
-地址、内嵌凭据和解析到内网的域名。
+运行依赖固定版本并要求 SHA-256 哈希及 binary distributions。缓存键绑定 Skill、Python 和
+锁文件；内部引擎以 Python isolated mode 启动，不信任当前目录或用户 `PYTHONPATH`。
 
-Anna search, detail, download targets, and every redirect are validated, blocking local,
-private, link-local, credential-bearing, and private-resolving destinations.
+Runtime dependencies are pinned, SHA-256-checked, and binary-only. Cache keys bind the Skill,
+Python, and lock file. The engine starts in Python isolated mode without trusting the current
+directory or user `PYTHONPATH`.
 
-### OSR-003: 下载缺少大小、类型和完整性边界 / Missing download boundaries
+### OSR-003: 不可信域名可能接收凭据 / Untrusted domains could receive credentials
 
-下载使用流式写入和可配置大小上限；Anna 只接受已知电子书类型/扩展名并验证 MD5。空文件、
-超限、类型异常和校验失败不会替换最终文件。
+非内置或非入口发现的 Z-Library 域名默认不访问，必须由用户显式 opt in；Agent 禁止猜测
+登录域名。该授权不会持久化。
 
-Downloads stream with a configurable size limit. Anna accepts known ebook types/extensions
-and verifies MD5; empty, oversized, unexpected, or checksum-failing files never replace the
-final output.
+Z-Library domains outside the built-in or discovered trust set are blocked unless the user
+explicitly opts in. The Skill forbids guessed login domains, and trust is not persisted.
 
-### OSR-004: Agent 协议与来源降级不稳定 / Unstable agent contract and source fallback
+### OSR-004: 搜索与下载可能访问内网 / Search and download could reach private networks
 
-`--source all` 会隔离单来源错误并继续；所有响应包含 `schema_version`、`cli_version` 和稳定
-错误码。默认异常不会回显上游正文、完整下载 URL 或 traceback。
+Anna 搜索、详情、下载和每次重定向均校验 URL，阻止 localhost、私有/链路本地地址、内嵌
+凭据和解析到内网的域名。
 
-`--source all` isolates source failures and continues. Every response carries schema/CLI
-versions and stable error codes. Default errors do not echo remote page text, full download
-URLs, or tracebacks.
+Anna search, detail, download, and every redirect validate URLs and block local, private,
+link-local, credential-bearing, and private-resolving destinations.
 
-### OSR-005: 开源仓库材料和维护门槛不完整 / Incomplete public materials and maintenance gates
+### OSR-005: 下载边界与 Agent 协议 / Download boundaries and Agent contract
 
-仓库现包含中英双语 README、贡献指南、安全政策、行为准则、支持说明、第三方许可证、路线图、
-变更记录、发布手册、Release Notes、PR/Issue 模板与 Agent 元数据。CI 覆盖 Python 3.9-3.14、
-打包、依赖审计、Bandit 和秘密扫描。
+下载使用大小上限、已知类型、`.part` 文件和不覆盖策略；Anna 校验 MD5。schema 2 响应包含
+`skill_version`、稳定错误码和来源状态；默认错误不回显远端正文、完整私人 URL 或 traceback。
 
-The repository now contains bilingual README, contribution, security, conduct, support,
-third-party, roadmap, changelog, release-guide, release-note, PR/issue, and agent metadata.
-CI covers Python 3.9-3.14, packaging, dependency audit, Bandit, and secret scanning.
+Downloads enforce size, known type, `.part`, and no-overwrite boundaries; Anna verifies MD5.
+Schema 2 responses carry `skill_version`, stable errors, and source status. Default failures do
+not echo remote text, complete private URLs, or tracebacks.
 
 ## 已知剩余风险 / Known Residual Risks
 
-- Anna 依赖不稳定 HTML，页面改版仍会导致回归 / Anna relies on unstable HTML and can
-  regress when markup changes.
-- Z-Library 与 Anna 域名可能被封锁、吊销或接管，信任集合必须持续维护 / Domains can be
-  blocked, revoked, or taken over; trust data requires maintenance.
-- Z-Library token 仍为本地明文 JSON，不使用系统 keychain / The Z-Library token remains
-  plaintext local JSON rather than an OS keychain secret.
-- 默认 CI 不访问真实上游，不能提前发现所有页面变化 / Default CI avoids live services and
-  cannot detect every upstream change.
-- `zlib-cli` 容易与压缩库混淆，README 已标注但无法完全消除 / The name can be confused
-  with the compression library; README reduces but does not eliminate that risk.
-- CLI 主模块仍较大，后续应拆分命令、来源适配器和下载策略 / The main CLI module remains
-  large and should later be split into commands, source adapters, and download policies.
+- Anna 依赖不稳定 HTML、第三方镜像和验证码 / Anna relies on unstable HTML, third-party
+  mirrors, and captcha behavior.
+- Z-Library 与 Anna 域名可能被封锁、吊销或接管；信任集合需要维护 / Domains may be
+  blocked, revoked, or taken over; trust data needs maintenance.
+- Z-Library token 仍是本机明文 JSON，尚未使用系统 keychain / The token remains local
+  plaintext JSON rather than an OS keychain secret.
+- 首次运行需要 Python 包索引网络；断网用户无法准备依赖 / First use needs package-index
+  access; fully offline users cannot prepare dependencies.
+- 默认 CI 不访问真实上游，无法提前发现所有页面变化 / Default CI avoids live services and
+  cannot detect every upstream markup change.
+- 执行引擎仍较大，后续应拆分来源适配器和下载策略 / The engine remains large and should be
+  split into deeper source-adapter and download-policy modules.
 
-以上是 alpha 维护风险，不是当前开源阻塞项。
+这些是 alpha 维护风险，不是当前开源阻塞项。
 
 These are alpha maintenance risks, not current publication blockers.
 
 ## 验证证据 / Validation Evidence
 
-- Python 3.9 与 3.14：`93 passed`；3.9 仅有系统 LibreSSL/urllib3 环境警告 / `93 passed`
-  on Python 3.9 and 3.14; 3.9 emitted only a system LibreSSL/urllib3 warning.
-- Ruff、format check、compileall、Skill validator、YAML validation：passed.
-- sdist 与 wheel 构建成功；wheel 安装后的 `--version`、`--help` 和 JSON error smoke 通过 /
-  sdist/wheel build and installed-wheel version, help, and JSON-error smoke passed.
-- `pip-audit`：无已知运行时依赖漏洞 / no known runtime dependency vulnerabilities.
-- `bandit -ll`：无 medium/high findings / no medium/high findings.
-- `detect-secrets`：最终文件快照 0 findings / zero findings in the final file snapshot.
-- 无账号 Anna 隔离配置实时搜索成功，未下载文件 / An isolated, account-free Anna live
-  search succeeded; no file was downloaded.
-- 新公开仓库 `main` 的八个 GitHub CI jobs 全绿 / All eight GitHub CI jobs passed on the
-  new public repository's `main`.
-- 未登录视角可见 README、MIT License 与 Security Policy；匿名 HTTPS clone 和全新 venv
-  安装后 `--version`、`--help` 通过 / README, MIT License, and Security Policy are visible
-  while logged out; anonymous HTTPS clone and fresh-venv version/help checks passed.
+- Python 3.9 与 3.14：各 `107 passed`；3.9 仅有 Apple 系统 LibreSSL/urllib3 警告 /
+  `107 passed` on Python 3.9 and 3.14; 3.9 emitted only the Apple system LibreSSL warning.
+- 3.9 与 3.14 的真实首次引导、无账号 `auth status --json` 和缓存复用通过 / Real first-use
+  bootstrap, account-free auth status, and cache reuse passed on 3.9 and 3.14.
+- Ruff、format、compileall、Skill validator、YAML 与 Markdown 链接检查通过 / Ruff,
+  formatting, compile, Skill, YAML, and Markdown link checks passed.
+- `pip-audit` 无已知运行依赖漏洞；Bandit 无 medium/high findings / No known dependency
+  vulnerabilities or medium/high Bandit findings.
+- tracked files 与新增文件密钥扫描 0 findings / Secret scan reported zero findings.
+- 六版本测试矩阵、`package` 自包含安装和 `security` 构成八个受保护 CI checks / Six Python
+  tests plus self-contained `package` and `security` jobs form eight protected checks.
+- 隔离安装验证不读取账号、不登录、不搜索、不下载 / Isolated install verification reads no
+  account and performs no login, search, or download.
 
 ## 最终发布门槛 / Final Release Gate
 
-- [x] 新仓库历史仅含 noreply 提交 / New repository history contains only noreply commits.
-- [x] 新仓库 `main` 的八个 GitHub CI checks 全绿 / All eight GitHub CI checks pass on `main`.
-- [x] `origin` 只指向 `soluna/zlib-cli` / `origin` points only to `soluna/zlib-cli`.
-- [x] Public 后已启用 branch protection 与 Private Vulnerability Reporting / Branch
-  protection and Private Vulnerability Reporting are enabled after making the repository public.
-- [x] 未登录浏览器和公开 URL 全新安装检查通过 / Logged-out and public clean-install checks pass.
-- [x] `v0.1.0` tag 与 Release 已创建 / The `v0.1.0` tag and release exist.
+- [x] 历史仅含 noreply 提交且无私人 remote / Noreply-only history and no private remote.
+- [x] Skill 名称、目录、Agent 元数据与公开 URL 统一为 `zlib-anna-skill` / Naming aligned.
+- [x] 单次安装、首次引导、缓存复用和安全失败测试通过 / Self-contained runtime tests pass.
+- [x] Python 3.9-3.14 与八项 GitHub checks 全绿 / Python matrix and all eight checks pass.
+- [x] 分支保护、Private Vulnerability Reporting、secret scanning 和 push protection 启用 /
+  Repository security settings remain enabled.
+- [x] 未登录页面与新公开 URL 干净安装通过 / Logged-out pages and public install pass.
+- [x] `v0.2.0` tag 与 Release 使用当前名称 / The tag and release use the current name.

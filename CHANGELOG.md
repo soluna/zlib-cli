@@ -1,58 +1,59 @@
 # Changelog / 变更记录
 
-本项目遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 的结构；`0.x` 阶段
-可能包含不兼容调整。
+本项目遵循 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)；`0.x` 可能包含不兼容
+调整。
 
-This project follows the structure of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Breaking changes may occur during `0.x`.
+This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Breaking
+changes may occur during `0.x`.
 
-## Unreleased / 未发布
+## 0.2.0 - 2026-08-06
 
-### Documentation / 文档
+### Added / 新增
 
-- 在 README 首屏增加可直接发送给 Agent 的双语安装指令，并明确 Skill 注册与 CLI 安装是
-  两个步骤 / Added a bilingual first-screen agent installation request and clarified that
-  Skill registration and CLI installation are separate steps.
-- 新增 Codex 根目录 `--path . --name zlib-cli`、`pipx`、验证与其他 Agent 能力边界说明 /
-  Added exact Codex root-path, pipx, verification, and cross-agent capability guidance.
+- 自包含 `scripts/run.py`，首次使用创建版本化缓存运行环境 / A self-contained runner that
+  prepares a versioned cache-local runtime on first use.
+- 通用、固定版本并带 SHA-256 哈希的运行依赖锁 / A universal, pinned runtime dependency lock
+  with SHA-256 hashes.
+- 首次引导失败的脱敏 schema 2 JSON 与缓存复用测试 / Sanitized schema 2 setup failures and
+  runtime-cache reuse tests.
+- `ZLIB_ANNA_*` 运行、配置、安全和调试环境变量 / Skill-named runtime, config, safety, and
+  debug environment variables.
+
+### Changed / 调整
+
+- 项目与 Skill 重命名为 `zlib-anna-skill` / Renamed the project and Skill.
+- 执行代码迁移到 `scripts/zlib_anna/`，作为 Skill 私有深模块 / Moved execution code into a
+  private bundled module.
+- JSON schema 升至 2，`cli_version` 改为 `skill_version` / Raised the JSON schema to 2 and
+  replaced `cli_version` with `skill_version`.
+- 安装从 Skill + CLI 两步改为单次 Skill 安装 / Replaced two-surface Skill-plus-CLI setup
+  with one Skill installation.
+- Agent 元数据、双语文档、Issue/PR 模板与 CI 统一为 Skill-first / Updated metadata, docs,
+  templates, and CI around the Skill-first product.
+
+### Removed / 移除
+
+- 移除全局 `zlib-cli` console script、`pipx` 要求、wheel/sdist 和 Python 包发布面 / Removed
+  the global console command, pipx requirement, wheel/sdist, and standalone package surface.
+
+### Security / 安全
+
+- 运行依赖使用 `--require-hashes --only-binary=:all:` / Runtime dependencies require hashes
+  and binary distributions.
+- 内部引擎以 Python isolated mode 启动，避免当前目录与 `PYTHONPATH` 注入 / The engine
+  starts in isolated mode to avoid current-directory and `PYTHONPATH` injection.
 
 ## 0.1.0 - 2026-08-06
 
 ### Added / 新增
 
-- Agent-first JSON 协议：schema/CLI 版本、稳定错误码、结构化来源状态 / Agent-first
-  JSON contract with schema/CLI versions, stable error codes, and source status.
-- Z-Library 登录、搜索、动态域名、流式下载和无账号 Anna 降级 / Z-Library auth,
-  search, dynamic domains, streaming downloads, and account-free Anna fallback.
-- Anna HTML 搜索、镜像解析、best-effort 下载与 MD5 校验 / Anna HTML search, mirror
-  resolution, best-effort downloads, and MD5 verification.
-- `doctor`、`resolve`、`batch`、多格式过滤和可创建下载目录诊断 / Doctor, resolve,
-  batch, multi-format filters, and creatable-directory diagnostics.
-- 下载大小上限、已知电子书类型检查、私网/重定向安全边界 / Download size limits,
-  ebook-type checks, and private-network/redirect protections.
-- `ZLIB_CLI_CONFIG_DIR`、XDG、受信任域名与开发 opt-in 配置 / Config-directory/XDG,
-  trusted-domain, and development opt-ins.
-- Python 3.9-3.14 CI、构建冒烟、依赖审计、secret scan / Python 3.9-3.14 CI,
-  package smoke tests, dependency audit, and secret scan.
-- 中英双语 README、贡献、安全、行为准则、支持、发布手册和第三方声明 / Bilingual
-  README, contribution, security, conduct, support, release, and third-party documents.
-
-### Changed / 调整
-
-- `--source all` 在单个来源失败时继续其他来源 / Multi-source search continues after
-  one source fails.
-- Anna 能力明确标记为 `can_attempt_download`，不再暗示保证下载 / Anna capability is
-  marked best-effort instead of guaranteed.
-- 删除不安全的 `--password` 参数，仅保留安全提示与 stdin / Removed the unsafe argv
-  password option; secure prompt and stdin remain.
-- `doctor` 缩写用户主目录，异常默认返回脱敏 JSON / Doctor abbreviates home paths and
-  unexpected exceptions return sanitized JSON.
-
-### Security / 安全
-
-- 未验证 Z-Library 域名默认不会被访问或接收 token / Unverified Z-Library domains are
-  not contacted or sent tokens by default.
-- Anna 下载验证所有跳转并阻止内网目标 / Anna downloads validate redirects and block
-  private-network targets.
-- 严格验证 Anna MD5、Z-Library ID/hash 和下载文件名 / Strict result-id and filename
-  validation.
+- 首个公开 alpha：Z-Library 登录、动态域名、搜索与流式下载 / First public alpha with
+  Z-Library auth, dynamic domains, search, and streaming downloads.
+- Anna 无账号搜索、镜像解析、best-effort 下载和 MD5 校验 / Account-free Anna search,
+  mirror resolution, best-effort downloads, and MD5 verification.
+- Agent JSON 协议、稳定错误码、`doctor`、`resolve` 与 `batch` / Agent JSON contract,
+  stable error codes, doctor, resolve, and batch operations.
+- 下载大小、类型、重定向、私网与凭据安全边界 / Download size, type, redirect,
+  private-network, and credential boundaries.
+- Python 3.9-3.14 CI、依赖审计、Bandit 与 secret scan / Python 3.9-3.14 CI, dependency
+  audit, Bandit, and secret scanning.

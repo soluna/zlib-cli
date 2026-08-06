@@ -14,7 +14,7 @@ body:
     attributes:
       label: Summary / 问题摘要
       description: What went wrong? / 发生了什么？
-      placeholder: zlib-cli search/download failed when...
+      placeholder: The bundled Skill runner failed when...
     validations:
       required: true
   - type: textarea
@@ -23,16 +23,16 @@ body:
       label: Reproduction steps / 复现步骤
       description: Include the exact command, but redact secrets. / 提供准确命令并删除敏感值。
       placeholder: |
-        1. Run `zlib-cli doctor --json`
-        2. Run `zlib-cli search "..." --source anna --json`
-        3. Run `zlib-cli download "anna:..." --json`
+        1. Run `python3 {baseDir}/scripts/run.py doctor --json`
+        2. Run `python3 {baseDir}/scripts/run.py search "..." --source anna --json`
+        3. Run `python3 {baseDir}/scripts/run.py download "anna:..." --json`
     validations:
       required: true
   - type: textarea
     id: doctor
     attributes:
       label: doctor output / 诊断输出
-      description: Paste redacted `zlib-cli doctor --json` output. / 粘贴已脱敏的诊断输出。
+      description: Paste redacted bundled `doctor --json` output. / 粘贴已脱敏的诊断输出。
       render: json
     validations:
       required: false
@@ -47,8 +47,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: zlib-cli version / 版本
-      placeholder: zlib-cli --version
+      label: zlib-anna-skill version / 版本
+      placeholder: python3 {baseDir}/scripts/run.py --version
     validations:
       required: false
   - type: dropdown

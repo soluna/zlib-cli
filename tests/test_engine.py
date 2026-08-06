@@ -1,9 +1,8 @@
-"""Unit tests for the agent-first CLI contract."""
+"""Unit tests for the bundled Skill engine contract."""
 
 import argparse
 import hashlib
 import json
-import re
 import stat
 import sys
 import tempfile
@@ -12,9 +11,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-import zlib_cli
+from zlib_anna import SCHEMA_VERSION, SKILL_VERSION, engine
 
 PDF_BODY = b"%PDF fake"
 PDF_MD5 = hashlib.md5(PDF_BODY, usedforsecurity=False).hexdigest()
@@ -24,7 +23,7 @@ EPUB_MD5 = hashlib.md5(EPUB_BODY, usedforsecurity=False).hexdigest()
 
 @pytest.fixture(autouse=True)
 def allow_mock_network(monkeypatch):
-    monkeypatch.setenv("ZLIB_CLI_ALLOW_PRIVATE_NETWORK", "1")
+    monkeypatch.setenv("ZLIB_ANNA_ALLOW_PRIVATE_NETWORK", "1")
 
 
 class FakeResponse:
@@ -51,7 +50,7 @@ class FakeResponse:
 
     def raise_for_status(self):
         if self.status_code >= 400:
-            raise zlib_cli.requests.HTTPError(str(self.status_code), response=self)
+            raise engine.requests.HTTPError(str(self.status_code), response=self)
 
     def iter_content(self, chunk_size=1024):
         yield self.body
@@ -63,21 +62,41 @@ class FakeResponse:
 @pytest.fixture
 def temp_config():
     with tempfile.TemporaryDirectory() as tmpdir:
-        config_dir = Path(tmpdir) / "zlib_cli"
+        config_dir = Path(tmpdir) / "engine"
         config_file = config_dir / "config.json"
-        with patch("zlib_cli.CONFIG_DIR", config_dir), patch("zlib_cli.CONFIG_FILE", config_file):
+        with (
+            patch("zlib_anna.engine.CONFIG_DIR", config_dir),
+            patch("zlib_anna.engine.CONFIG_FILE", config_file),
+        ):
             yield config_dir, config_file
 
 
 def test_load_config_empty(temp_config):
-    assert zlib_cli.load_config() == {}
+    assert engine.load_config() == {}
+
+
+def test_default_config_dir_prefers_skill_named_override(monkeypatch, tmp_path):
+    preferred = tmp_path / "preferred"
+    legacy = tmp_path / "legacy"
+    monkeypatch.setenv("ZLIB_ANNA_CONFIG_DIR", str(preferred))
+    monkeypatch.setenv("ZLIB_CLI_CONFIG_DIR", str(legacy))
+
+    assert engine.default_config_dir() == preferred
+
+
+def test_default_config_dir_accepts_legacy_override(monkeypatch, tmp_path):
+    legacy = tmp_path / "legacy"
+    monkeypatch.delenv("ZLIB_ANNA_CONFIG_DIR", raising=False)
+    monkeypatch.setenv("ZLIB_CLI_CONFIG_DIR", str(legacy))
+
+    assert engine.default_config_dir() == legacy
 
 
 def test_safe_json_response_rejects_non_object_payload():
     response = MagicMock()
     response.json.return_value = ["unexpected", "payload"]
 
-    assert zlib_cli.safe_json_response(response) is None
+    assert engine.safe_json_response(response) is None
 
 
 def test_load_config_rejects_non_object_json(temp_config):
@@ -85,20 +104,20 @@ def test_load_config_rejects_non_object_json(temp_config):
     config_dir.mkdir(parents=True)
     config_file.write_text("[]", encoding="utf-8")
 
-    with pytest.raises(zlib_cli.CliError) as exc:
-        zlib_cli.load_config()
+    with pytest.raises(engine.SkillError) as exc:
+        engine.load_config()
 
     assert exc.value.code == "CONFIG_INVALID"
-    assert zlib_cli.load_config(strict=False) == {}
+    assert engine.load_config(strict=False) == {}
 
 
 def test_save_config_uses_private_permissions(temp_config):
     config_dir, config_file = temp_config
     cfg = {"remix_userid": "123", "remix_userkey": "token-value", "domain": "test.example"}
 
-    zlib_cli.save_config(cfg)
+    engine.save_config(cfg)
 
-    assert zlib_cli.load_config() == cfg
+    assert engine.load_config() == cfg
     assert stat.S_IMODE(config_dir.stat().st_mode) == 0o700
     assert stat.S_IMODE(config_file.stat().st_mode) == 0o600
 
@@ -113,7 +132,7 @@ def test_load_config_repairs_legacy_permissions(temp_config):
     config_dir.chmod(0o755)
     config_file.chmod(0o644)
 
-    cfg = zlib_cli.load_config()
+    cfg = engine.load_config()
 
     assert cfg["remix_userkey"] == "token-value"
     assert stat.S_IMODE(config_dir.stat().st_mode) == 0o700
@@ -130,7 +149,7 @@ def test_config_status_reports_permission_repairs(temp_config):
     config_dir.chmod(0o755)
     config_file.chmod(0o644)
 
-    status = zlib_cli.config_status()
+    status = engine.config_status()
 
     assert status["config_dir_mode"] == "0o700"
     assert status["config_file_mode"] == "0o600"
@@ -142,7 +161,7 @@ def test_config_status_reports_permission_repairs(temp_config):
 
 def test_config_status_redacts_sensitive_values(temp_config):
     _, config_file = temp_config
-    zlib_cli.save_config(
+    engine.save_config(
         {
             "remix_userid": "42",
             "remix_userkey": "token-value",
@@ -152,7 +171,7 @@ def test_config_status_redacts_sensitive_values(temp_config):
         }
     )
 
-    status = zlib_cli.config_status()
+    status = engine.config_status()
     encoded = json.dumps(status)
 
     assert status["zlib"]["has_token"] is True
@@ -162,18 +181,18 @@ def test_config_status_redacts_sensitive_values(temp_config):
 
 
 def test_config_status_reports_zlib_domain_override(temp_config):
-    with patch.dict(zlib_cli.os.environ, {"ZLIBRARY_DOMAIN": "https://env.example/path"}):
-        status = zlib_cli.config_status()
+    with patch.dict(engine.os.environ, {"ZLIBRARY_DOMAIN": "https://env.example/path"}):
+        status = engine.config_status()
 
     assert status["zlib"]["domain_env"] == "env.example"
 
 
 def test_mask_email_handles_empty_local_part():
-    assert zlib_cli.mask_email("@example.com") == "*@example.com"
+    assert engine.mask_email("@example.com") == "*@example.com"
 
 
 def test_fetch_domains_filters_unusable_domains():
-    with patch("zlib_cli.requests.get") as mock_get:
+    with patch("zlib_anna.engine.requests.get") as mock_get:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = {
@@ -186,34 +205,34 @@ def test_fetch_domains_filters_unusable_domains():
         }
         mock_get.return_value = mock_resp
 
-        domains = zlib_cli.fetch_domains()
+        domains = engine.fetch_domains()
 
     assert domains == ["z-library.example"]
 
 
 def test_test_domain_handles_request_errors():
     with patch(
-        "zlib_cli.requests.get",
-        side_effect=zlib_cli.requests.RequestException("network down"),
+        "zlib_anna.engine.requests.get",
+        side_effect=engine.requests.RequestException("network down"),
     ):
-        assert zlib_cli.test_domain("bad.example") is False
+        assert engine.test_domain("bad.example") is False
 
 
 def test_find_working_domain_prefers_env_override():
     with (
         patch.dict(
-            zlib_cli.os.environ,
+            engine.os.environ,
             {
                 "ZLIBRARY_DOMAIN": "https://env.example/path",
                 "ZLIBRARY_ALLOW_UNTRUSTED_DOMAIN": "1",
             },
         ),
         patch(
-            "zlib_cli.test_domain",
+            "zlib_anna.engine.test_domain",
             return_value=True,
         ) as mock_test_domain,
     ):
-        domain, checks = zlib_cli.find_working_domain("config.example")
+        domain, checks = engine.find_working_domain("config.example")
 
     assert domain == "env.example"
     assert checks == [
@@ -226,7 +245,7 @@ def test_find_working_domain_prefers_env_override():
         }
     ]
     mock_test_domain.assert_called_once_with("env.example")
-    assert zlib_cli.domain_trust_is_persistent(domain, checks) is False
+    assert engine.domain_trust_is_persistent(domain, checks) is False
 
 
 def test_find_working_domain_does_not_contact_untrusted_override(monkeypatch):
@@ -234,13 +253,13 @@ def test_find_working_domain_does_not_contact_untrusted_override(monkeypatch):
     monkeypatch.delenv("ZLIBRARY_ALLOW_UNTRUSTED_DOMAIN", raising=False)
 
     with (
-        patch("zlib_cli.fetch_domains", return_value=[]),
+        patch("zlib_anna.engine.fetch_domains", return_value=[]),
         patch(
-            "zlib_cli.test_domain",
+            "zlib_anna.engine.test_domain",
             return_value=True,
         ) as mock_test_domain,
     ):
-        domain, checks = zlib_cli.find_working_domain()
+        domain, checks = engine.find_working_domain()
 
     assert domain == "z-library.sk"
     assert checks[0]["domain"] == "untrusted.example"
@@ -252,7 +271,7 @@ def test_download_dir_status_reports_creatable_when_home_is_missing(tmp_path):
     missing_home = tmp_path / "missing-home"
     download_dir = missing_home / "Books"
 
-    status = zlib_cli.download_dir_status(download_dir)
+    status = engine.download_dir_status(download_dir)
 
     assert status["exists"] is False
     assert status["parent_exists"] is False
@@ -261,7 +280,7 @@ def test_download_dir_status_reports_creatable_when_home_is_missing(tmp_path):
 
 
 def test_parser_supports_json_and_source_choices():
-    parser = zlib_cli.build_parser()
+    parser = engine.build_parser()
 
     args = parser.parse_args(["search", "clean code", "--source", "all", "--json"])
 
@@ -271,22 +290,24 @@ def test_parser_supports_json_and_source_choices():
 
 
 def test_parser_help_includes_first_run_examples():
-    help_text = zlib_cli.build_parser().format_help()
+    help_text = engine.build_parser().format_help()
 
     assert "Examples:" in help_text
     assert "ZLIBRARY_DOMAIN" in help_text
+    assert "{baseDir}/scripts/run.py" in help_text
+    assert "zlib-cli" not in help_text
     assert "==SUPPRESS==" not in help_text
 
 
 def test_parser_rejects_non_positive_limits():
-    parser = zlib_cli.build_parser()
+    parser = engine.build_parser()
 
     with pytest.raises(SystemExit):
         parser.parse_args(["search", "python", "--limit", "0"])
 
 
 def test_main_emits_json_for_argument_errors(capsys):
-    exit_code = zlib_cli.main(["search", "python", "--limit", "0", "--json"])
+    exit_code = engine.main(["search", "python", "--limit", "0", "--json"])
     captured = capsys.readouterr()
 
     assert exit_code == 2
@@ -294,12 +315,8 @@ def test_main_emits_json_for_argument_errors(capsys):
     assert "usage:" in captured.err
 
 
-def test_app_version_matches_pyproject():
-    pyproject = Path(__file__).parent.parent / "pyproject.toml"
-    match = re.search(r'^version = "([^"]+)"', pyproject.read_text(encoding="utf-8"), re.M)
-
-    assert match
-    assert zlib_cli.APP_VERSION == match.group(1)
+def test_skill_version_has_single_source():
+    assert engine.ok_payload()["skill_version"] == SKILL_VERSION
 
 
 @pytest.mark.parametrize(
@@ -322,7 +339,7 @@ def test_app_version_matches_pyproject():
     ],
 )
 def test_parse_result_ref(value, source, hash_id, expected):
-    assert zlib_cli.parse_result_ref(value, source, hash_id) == expected
+    assert engine.parse_result_ref(value, source, hash_id) == expected
 
 
 @pytest.mark.parametrize(
@@ -335,8 +352,8 @@ def test_parse_result_ref(value, source, hash_id, expected):
     ],
 )
 def test_parse_result_ref_rejects_malformed_ids(value):
-    with pytest.raises(zlib_cli.CliError) as exc:
-        zlib_cli.parse_result_ref(value)
+    with pytest.raises(engine.SkillError) as exc:
+        engine.parse_result_ref(value)
 
     assert exc.value.code == "INVALID_RESULT_ID"
 
@@ -364,7 +381,7 @@ def test_search_all_falls_back_to_anna_without_zlib_auth(temp_config):
         "extension": "PDF",
         "size": "1MB",
     }
-    anna_status = zlib_cli.SourceStatus(
+    anna_status = engine.SourceStatus(
         source="anna",
         available=True,
         authenticated=False,
@@ -373,8 +390,8 @@ def test_search_all_falls_back_to_anna_without_zlib_auth(temp_config):
         status="ok",
     )
 
-    with patch("zlib_cli.search_anna", return_value=([anna_book], anna_status)):
-        payload = zlib_cli.cmd_search(args)
+    with patch("zlib_anna.engine.search_anna", return_value=([anna_book], anna_status)):
+        payload = engine.cmd_search(args)
 
     assert payload["ok"] is True
     assert payload["results"] == [anna_book]
@@ -399,7 +416,7 @@ def test_search_all_continues_when_zlib_source_errors(temp_config):
         "result_id": "anna:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "source": "anna",
     }
-    anna_status = zlib_cli.SourceStatus(
+    anna_status = engine.SourceStatus(
         source="anna",
         available=True,
         can_search=True,
@@ -409,12 +426,12 @@ def test_search_all_continues_when_zlib_source_errors(temp_config):
 
     with (
         patch(
-            "zlib_cli.search_zlib",
-            side_effect=zlib_cli.CliError("SOURCE_UNAVAILABLE", "blocked"),
+            "zlib_anna.engine.search_zlib",
+            side_effect=engine.SkillError("SOURCE_UNAVAILABLE", "blocked"),
         ),
-        patch("zlib_cli.search_anna", return_value=([anna_book], anna_status)),
+        patch("zlib_anna.engine.search_anna", return_value=([anna_book], anna_status)),
     ):
-        payload = zlib_cli.cmd_search(args)
+        payload = engine.cmd_search(args)
 
     assert payload["ok"] is True
     assert payload["results"] == [anna_book]
@@ -425,8 +442,8 @@ def test_search_all_continues_when_zlib_source_errors(temp_config):
 def test_search_zlib_without_auth_is_error(temp_config):
     args = argparse.Namespace(source="zlib")
 
-    with pytest.raises(zlib_cli.CliError) as exc:
-        zlib_cli.search_zlib(args, {})
+    with pytest.raises(engine.SkillError) as exc:
+        engine.search_zlib(args, {})
 
     assert exc.value.code == "AUTH_REQUIRED"
 
@@ -439,7 +456,7 @@ def test_normalize_anna_book_marks_download_as_best_effort():
         "detail_url": "https://annas.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     }
 
-    result = zlib_cli.normalize_anna_book(book)
+    result = engine.normalize_anna_book(book)
 
     assert result["can_download"] is False
     assert result["can_attempt_download"] is True
@@ -482,8 +499,8 @@ def test_anna_filters_year_and_language_locally():
         },
     ]
 
-    with patch("zlib_cli.annas_archive.AnnasArchiveClient", return_value=client):
-        books, status = zlib_cli.search_anna(args)
+    with patch("zlib_anna.engine.annas_archive.AnnasArchiveClient", return_value=client):
+        books, status = engine.search_anna(args)
 
     assert [book["title"] for book in books] == ["Keep"]
     assert status.can_download is False
@@ -504,13 +521,13 @@ def test_search_anna_sanitizes_upstream_failure(monkeypatch):
         order=None,
     )
     client = MagicMock()
-    client.search.side_effect = zlib_cli.requests.ConnectionError(
+    client.search.side_effect = engine.requests.ConnectionError(
         "request failed for https://annas.example/private?token=secret"
     )
     monkeypatch.setenv("ANNAS_BASE_URL", "https://annas.example/private?token=secret")
 
-    with patch("zlib_cli.annas_archive.AnnasArchiveClient", return_value=client):
-        books, status = zlib_cli.search_anna(args)
+    with patch("zlib_anna.engine.annas_archive.AnnasArchiveClient", return_value=client):
+        books, status = engine.search_anna(args)
 
     assert books == []
     assert status.message == "Anna's Archive request failed."
@@ -522,14 +539,15 @@ def test_search_anna_sanitizes_upstream_failure(monkeypatch):
 
 
 def test_main_json_error_is_machine_readable(capsys):
-    exit_code = zlib_cli.main(["download", "unknown-id", "--json"])
+    exit_code = engine.main(["download", "unknown-id", "--json"])
     captured = capsys.readouterr()
     payload = json.loads(captured.out)
 
     assert exit_code == 1
     assert payload["ok"] is False
-    assert payload["schema_version"] == "1"
-    assert payload["cli_version"] == zlib_cli.APP_VERSION
+    assert payload["schema_version"] == SCHEMA_VERSION
+    assert payload["skill_version"] == SKILL_VERSION
+    assert "cli_version" not in payload
     assert payload["error"]["code"] == "SOURCE_REQUIRED"
     assert captured.err == ""
 
@@ -548,7 +566,7 @@ def test_download_anna_direct_file_response(tmp_path):
 
     with (
         patch(
-            "zlib_cli.anna_links",
+            "zlib_anna.engine.anna_links",
             return_value={
                 "detail_url": f"https://annas.example/md5/{PDF_MD5}",
                 "libgen_li": "https://files.example/book.pdf",
@@ -557,9 +575,9 @@ def test_download_anna_direct_file_response(tmp_path):
                 "fast_downloads": [],
             },
         ),
-        patch("zlib_cli.requests.Session", return_value=fake_session),
+        patch("zlib_anna.engine.requests.Session", return_value=fake_session),
     ):
-        payload = zlib_cli.download_anna(args, PDF_MD5)
+        payload = engine.download_anna(args, PDF_MD5)
 
     assert payload["ok"] is True
     assert payload["downloaded"] is True
@@ -586,7 +604,7 @@ def test_download_anna_follows_html_download_link(tmp_path):
 
     with (
         patch(
-            "zlib_cli.anna_links",
+            "zlib_anna.engine.anna_links",
             return_value={
                 "detail_url": f"https://annas.example/md5/{EPUB_MD5}",
                 "libgen_li": "https://libgen.example/book",
@@ -595,9 +613,9 @@ def test_download_anna_follows_html_download_link(tmp_path):
                 "fast_downloads": [],
             },
         ),
-        patch("zlib_cli.requests.Session", return_value=fake_session),
+        patch("zlib_anna.engine.requests.Session", return_value=fake_session),
     ):
-        payload = zlib_cli.download_anna(args, EPUB_MD5)
+        payload = engine.download_anna(args, EPUB_MD5)
 
     assert payload["downloaded"] is True
     assert payload["final_origin"] == "https://libgen.example"
@@ -622,14 +640,14 @@ def test_download_anna_reports_links_when_no_candidate_downloads(tmp_path):
     }
 
     with (
-        patch("zlib_cli.anna_links", return_value=links),
+        patch("zlib_anna.engine.anna_links", return_value=links),
         patch(
-            "zlib_cli.requests.Session",
+            "zlib_anna.engine.requests.Session",
             return_value=fake_session,
         ),
     ):
-        with pytest.raises(zlib_cli.CliError) as exc:
-            zlib_cli.download_anna(args, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        with pytest.raises(engine.SkillError) as exc:
+            engine.download_anna(args, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 
     assert exc.value.code == "DOWNLOAD_FAILED"
     assert exc.value.details["attempts"][0]["kind"] == "libgen_li"
@@ -641,7 +659,7 @@ def test_download_anna_does_not_expose_resolved_link_map_when_empty(tmp_path):
     detail_url = "https://annas.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
     with patch(
-        "zlib_cli.anna_links",
+        "zlib_anna.engine.anna_links",
         return_value={
             "detail_url": detail_url,
             "libgen_li": None,
@@ -650,8 +668,8 @@ def test_download_anna_does_not_expose_resolved_link_map_when_empty(tmp_path):
             "fast_downloads": [],
         },
     ):
-        with pytest.raises(zlib_cli.CliError) as exc:
-            zlib_cli.download_anna(args, "a" * 32)
+        with pytest.raises(engine.SkillError) as exc:
+            engine.download_anna(args, "a" * 32)
 
     assert exc.value.code == "DOWNLOAD_LINKS_NOT_FOUND"
     assert exc.value.details == {
@@ -672,7 +690,7 @@ def test_download_anna_rejects_checksum_mismatch_and_removes_partial(tmp_path):
 
     with (
         patch(
-            "zlib_cli.anna_links",
+            "zlib_anna.engine.anna_links",
             return_value={
                 "detail_url": f"https://annas.example/md5/{wrong_md5}",
                 "libgen_li": "https://files.example/book.pdf",
@@ -681,10 +699,10 @@ def test_download_anna_rejects_checksum_mismatch_and_removes_partial(tmp_path):
                 "fast_downloads": [],
             },
         ),
-        patch("zlib_cli.requests.Session", return_value=fake_session),
+        patch("zlib_anna.engine.requests.Session", return_value=fake_session),
     ):
-        with pytest.raises(zlib_cli.CliError) as exc:
-            zlib_cli.download_anna(args, wrong_md5)
+        with pytest.raises(engine.SkillError) as exc:
+            engine.download_anna(args, wrong_md5)
 
     assert exc.value.code == "DOWNLOAD_FAILED"
     assert list(tmp_path.iterdir()) == []
@@ -698,7 +716,7 @@ def test_write_response_rejects_declared_file_over_size_limit(tmp_path):
     )
 
     with pytest.raises(ValueError, match="size limit"):
-        zlib_cli.write_response_to_path(response, tmp_path / "book.part", max_bytes=10)
+        engine.write_response_to_path(response, tmp_path / "book.part", max_bytes=10)
 
 
 def test_filename_from_response_replaces_executable_extension():
@@ -710,14 +728,14 @@ def test_filename_from_response_replaces_executable_extension():
         },
     )
 
-    assert zlib_cli.filename_from_response(response, "fallback") == "book.pdf"
+    assert engine.filename_from_response(response, "fallback") == "book.pdf"
 
 
 def test_main_converts_unexpected_exception_to_safe_json(capsys):
     result_id = "anna:" + "a" * 32
 
-    with patch("zlib_cli.cmd_download", side_effect=RuntimeError("secret-url-token")):
-        exit_code = zlib_cli.main(["download", result_id, "--json"])
+    with patch("zlib_anna.engine.cmd_download", side_effect=RuntimeError("secret-url-token")):
+        exit_code = engine.main(["download", result_id, "--json"])
 
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 1
@@ -727,10 +745,10 @@ def test_main_converts_unexpected_exception_to_safe_json(capsys):
 
 
 def test_imports_are_available():
-    import annas_archive
-    from Zlibrary import Zlibrary
+    from zlib_anna import annas_archive
+    from zlib_anna.zlibrary import Zlibrary
 
-    assert hasattr(zlib_cli, "main")
-    assert hasattr(zlib_cli, "build_parser")
+    assert hasattr(engine, "main")
+    assert hasattr(engine, "build_parser")
     assert hasattr(annas_archive, "AnnasArchiveClient")
     assert hasattr(Zlibrary(), "setDomain")

@@ -10,10 +10,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add the bundled scripts directory to the import path.
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from annas_archive import (
+from zlib_anna.annas_archive import (
     BASE_URL,
     SELECTOR_CHAIN,
     AnnasArchiveClient,
@@ -123,7 +123,7 @@ def client():
 
 @pytest.fixture(autouse=True)
 def allow_mock_network(monkeypatch):
-    monkeypatch.setenv("ZLIB_CLI_ALLOW_PRIVATE_NETWORK", "1")
+    monkeypatch.setenv("ZLIB_ANNA_ALLOW_PRIVATE_NETWORK", "1")
 
 
 @pytest.fixture
@@ -196,7 +196,7 @@ class TestSearchParsing:
 
     def test_unrecognized_page_does_not_echo_remote_instructions(self, client):
         """Parser errors must not expose arbitrary remote page text to the agent."""
-        import annas_archive
+        from zlib_anna import annas_archive
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -214,7 +214,7 @@ class TestSearchParsing:
 
     def test_parse_book_fields(self, client):
         """Verify all expected fields are extracted from search results."""
-        import annas_archive
+        from zlib_anna import annas_archive
 
         # Mock the HTTP call
         mock_resp = MagicMock()
@@ -236,7 +236,7 @@ class TestSearchParsing:
 
     def test_parse_limit_respected(self, client):
         """limit parameter should cap results."""
-        import annas_archive
+        from zlib_anna import annas_archive
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -259,7 +259,7 @@ class TestExtFilter:
 
     def test_ext_filter_pdf(self, client):
         """Filter ext_filter='pdf' should return only PDF results."""
-        import annas_archive
+        from zlib_anna import annas_archive
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -274,7 +274,7 @@ class TestExtFilter:
 
     def test_ext_filter_case_insensitive(self, client):
         """ext_filter should be case-insensitive."""
-        import annas_archive
+        from zlib_anna import annas_archive
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -290,7 +290,7 @@ class TestExtFilter:
 
     def test_ext_filter_accepts_comma_separated_formats(self, client):
         """ext_filter='pdf,epub' should match both PDF and EPUB results."""
-        import annas_archive
+        from zlib_anna import annas_archive
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -303,8 +303,8 @@ class TestExtFilter:
         assert [result["ext"] for result in results] == ["PDF", "EPUB"]
 
     def test_ext_filter_accepts_format_list(self, client):
-        """CLI can pass a parsed list of formats to Anna search."""
-        import annas_archive
+        """The bundled engine can pass a parsed list of formats to Anna search."""
+        from zlib_anna import annas_archive
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -318,7 +318,7 @@ class TestExtFilter:
 
     def test_ext_filter_no_match(self, client):
         """Filtering for a non-existent format should return empty."""
-        import annas_archive
+        from zlib_anna import annas_archive
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -332,7 +332,7 @@ class TestExtFilter:
 
     def test_ext_filter_none_returns_all(self, client):
         """ext_filter=None should return all formats unfiltered."""
-        import annas_archive
+        from zlib_anna import annas_archive
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -400,7 +400,7 @@ class TestDownloadLinks:
 
     def test_extract_all_sources(self, client):
         """All Libgen mirrors and fast downloads should be extracted."""
-        import annas_archive
+        from zlib_anna import annas_archive
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -417,7 +417,7 @@ class TestDownloadLinks:
         assert links["detail_url"] == (f"{BASE_URL}/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 
     def test_uses_exact_mirror_hostname_and_normalizes_protocol_relative_url(self, client):
-        import annas_archive
+        from zlib_anna import annas_archive
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -457,7 +457,7 @@ class TestHTTPRetry:
 
     def test_retry_on_500(self, mock_session):
         """5xx errors should trigger retry."""
-        import annas_archive
+        from zlib_anna import annas_archive
 
         mock_500 = MagicMock()
         mock_500.status_code = 500
@@ -488,8 +488,7 @@ class TestHTTPRetry:
     def test_max_retries_exceeded(self, mock_session):
         """After RETRY_MAX failures, should raise the last exception."""
         import requests as req
-
-        import annas_archive
+        from zlib_anna import annas_archive
 
         mock_session.get.side_effect = req.ConnectionError("Network down")
 

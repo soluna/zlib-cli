@@ -10,8 +10,10 @@ from urllib.parse import urljoin, urlparse, urlunparse
 
 import requests
 
-ALLOW_PRIVATE_NETWORK_ENV = "ZLIB_CLI_ALLOW_PRIVATE_NETWORK"
-ALLOW_INSECURE_HTTP_ENV = "ZLIB_CLI_ALLOW_INSECURE_HTTP"
+ALLOW_PRIVATE_NETWORK_ENV = "ZLIB_ANNA_ALLOW_PRIVATE_NETWORK"
+ALLOW_INSECURE_HTTP_ENV = "ZLIB_ANNA_ALLOW_INSECURE_HTTP"
+LEGACY_ALLOW_PRIVATE_NETWORK_ENV = "ZLIB_CLI_ALLOW_PRIVATE_NETWORK"
+LEGACY_ALLOW_INSECURE_HTTP_ENV = "ZLIB_CLI_ALLOW_INSECURE_HTTP"
 REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
 
 
@@ -19,8 +21,10 @@ class UnsafeUrlError(ValueError):
     """Raised when a URL could reach an unsafe or unexpected network target."""
 
 
-def env_flag(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+def env_flag(*names: str) -> bool:
+    return any(
+        os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"} for name in names
+    )
 
 
 def _is_public_ip(value: str) -> bool:
@@ -57,7 +61,7 @@ def validate_http_url(
     except ValueError as exc:
         raise UnsafeUrlError("URL contains an invalid port") from exc
 
-    if env_flag(ALLOW_PRIVATE_NETWORK_ENV):
+    if env_flag(ALLOW_PRIVATE_NETWORK_ENV, LEGACY_ALLOW_PRIVATE_NETWORK_ENV):
         return value
 
     if hostname == "localhost" or hostname.endswith((".localhost", ".local", ".internal")):

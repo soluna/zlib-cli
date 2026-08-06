@@ -1,24 +1,11 @@
-# Open-Source Release Guide / 开源发布手册
+# Open-Source Maintenance Guide / 开源维护手册
 
-本手册面向 `soluna/zlib-cli` 维护者，说明如何验证干净仓库、切换公开可见性并发布首个版本。
+本手册面向 `soluna/zlib-anna-skill` 维护者，覆盖干净历史、验证、发布和公开安装检查。
 
-This guide is for the `soluna/zlib-cli` maintainer. It covers clean-history verification,
-public visibility, and the first release.
+This guide is for maintainers of `soluna/zlib-anna-skill`. It covers clean history,
+validation, releases, and public-install checks.
 
-## 先看结论 / Read This First
-
-本仓库必须始终保持独立、干净的公开历史。它最初由经过审查的 tracked-file snapshot 创建，
-不得导入或合并任何前置私有仓库的 Git 历史、refs、PR refs 或 bundle。
-
-This repository must keep an independent, clean public history. It was created from an
-audited tracked-file snapshot. Never import or merge Git history, refs, pull-request refs,
-or bundles from any predecessor private repository.
-
-## 1. 验证历史与工作区 / Verify History and Worktree
-
-确认工作区干净，所有提交都使用公开身份：
-
-Confirm that the worktree is clean and every commit uses a public identity:
+## 1. 历史与工作区 / History and Worktree
 
 ```bash
 git status --short --branch
@@ -26,154 +13,151 @@ git log --all --format='%h %an <%ae> %s'
 git remote -v
 ```
 
-提交邮箱应为 GitHub noreply 地址，不应出现私人邮箱。`origin` 必须指向
-`https://github.com/soluna/zlib-cli.git`，不能指向任何内部仓库。
+提交使用 GitHub noreply 身份；`origin` 只能指向公开仓库。不要导入任何前置私有仓库的
+`.git`、refs、PR refs、bundle 或历史。
 
-Commit emails must use a GitHub noreply address; no private email should appear. `origin`
-must point to `https://github.com/soluna/zlib-cli.git`, never to an internal repository.
+Commits must use a GitHub noreply identity and `origin` must point only to the public
+repository. Never import `.git`, refs, pull-request refs, bundles, or history from a predecessor
+private repository.
 
-## 2. 运行发布验证 / Run Release Verification
+## 2. 本地发布门禁 / Local Release Gate
 
 在全新虚拟环境中执行：
 
-Run the release gate in a fresh virtual environment:
+Run in a fresh virtual environment:
 
 ```bash
 python3 -m venv .release-venv
 . .release-venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python -m pip install -r scripts/requirements.lock -r requirements-dev.txt
 
 pytest -q
 ruff check .
 ruff format --check .
-python -m compileall -q zlib_cli.py Zlibrary.py annas_archive.py network_safety.py tests
-python -m build
-pip-audit -r requirements.txt
-bandit -q -r zlib_cli.py Zlibrary.py annas_archive.py network_safety.py -ll
-git ls-files -z | xargs -0 detect-secrets scan > /tmp/zlib-cli-secrets.json
-python -c 'import json; data=json.load(open("/tmp/zlib-cli-secrets.json")); raise SystemExit(bool(data["results"]))'
+python -m compileall -q scripts tests
+pip-audit -r scripts/requirements.lock
+bandit -q -r scripts/run.py scripts/zlib_anna -ll
+git ls-files -z | xargs -0 detect-secrets scan \
+  | python -c 'import json,sys; raise SystemExit(bool(json.load(sys.stdin)["results"]))'
 ```
 
-检查构建产物并从 wheel 安装：
+验证 Skill 结构：
 
-Inspect the artifacts and install from the wheel:
+Validate the Skill structure:
 
 ```bash
-python -m venv .wheel-venv
-.wheel-venv/bin/python -m pip install dist/*.whl
-.wheel-venv/bin/zlib-cli --version
-.wheel-venv/bin/zlib-cli --help
+python /path/to/skill-creator/scripts/quick_validate.py .
 ```
 
-不要读取真实 `~/.config/zlib_cli/config.json`。需要实时 smoke test 时使用隔离配置目录，
-且只测试无账号 Anna 搜索，不执行下载：
+默认门禁不能读取真实账号或访问实时来源。网络单元测试必须 mock。
 
-Do not read the real `~/.config/zlib_cli/config.json`. If a live smoke test is needed, use
-an isolated config directory and only test account-free Anna search; do not download:
+The default gate must not read real accounts or access live sources. Network unit tests must
+use mocks.
+
+## 3. 自包含安装冒烟 / Self-Contained Install Smoke
+
+把 tracked files 复制到临时 Skill 目录，使用隔离运行与配置目录：
+
+Copy tracked files into a temporary Skill directory and isolate runtime and config:
 
 ```bash
-ZLIB_CLI_CONFIG_DIR=/tmp/zlib-cli-release-config \
-zlib-cli search "public domain book" --source anna --limit 1 --json
+ROOT=$(mktemp -d)
+mkdir -p "$ROOT/codex-home/skills/zlib-anna-skill"
+git archive HEAD | tar -x -C "$ROOT/codex-home/skills/zlib-anna-skill"
+
+ZLIB_ANNA_RUNTIME_DIR="$ROOT/runtime" \
+  python3 "$ROOT/codex-home/skills/zlib-anna-skill/scripts/run.py" --version
+ZLIB_ANNA_RUNTIME_DIR="$ROOT/runtime" ZLIB_ANNA_CONFIG_DIR="$ROOT/config" \
+  python3 "$ROOT/codex-home/skills/zlib-anna-skill/scripts/run.py" auth status --json
 ```
 
-真实上游受地区、封锁和页面变化影响，不作为默认 CI 的硬门槛；但失败必须保持结构化且可诊断。
+确认第二次运行复用同一缓存、stdout 是纯 JSON、隔离配置没有 token，并且没有全局命令或
+系统 Python 修改。
 
-Live upstream behavior varies by region, blocking, and markup. It is not a default CI gate,
-but failures must remain structured and actionable.
+Confirm the second run reuses the cache, stdout is pure JSON, isolated config has no token,
+and no global command or system-Python change occurs.
 
-## 3. 验证 GitHub CI / Verify GitHub CI
+## 4. GitHub CI 与安全设置 / GitHub CI and Security Settings
 
-公开前，`main` 最新提交必须通过以下 checks：
+`main` 必须通过六个 Python 3.9-3.14 测试、`package` 自包含安装冒烟和 `security`，共八项：
 
-Before publication, the latest `main` commit must pass:
-
-- Python 3.9-3.14 六个 test matrix jobs / six Python 3.9-3.14 test matrix jobs.
-- `package`：sdist、wheel 和安装冒烟 / sdist, wheel, and install smoke tests.
-- `security`：`pip-audit`、Bandit、`detect-secrets` / dependency, static, and secret scans.
+`main` must pass six Python 3.9-3.14 tests, the `package` self-contained install smoke, and
+`security`, for eight checks total:
 
 ```bash
-run_id=$(gh run list --repo soluna/zlib-cli --branch main --workflow CI \
+run_id=$(gh run list --repo soluna/zlib-anna-skill --branch main --workflow CI \
   --limit 1 --json databaseId --jq '.[0].databaseId')
-gh run watch "$run_id" --repo soluna/zlib-cli --exit-status
+gh run watch "$run_id" --repo soluna/zlib-anna-skill --exit-status
 ```
 
-## 4. 配置仓库元数据 / Configure Repository Metadata
+保持 `main` 分支保护、Private Vulnerability Reporting、Dependabot、secret scanning 和
+push protection。Actions 默认 `GITHUB_TOKEN` 使用只读权限。
+
+Keep branch protection, Private Vulnerability Reporting, Dependabot, secret scanning, and
+push protection enabled. The default Actions `GITHUB_TOKEN` must remain read-only.
+
+## 5. 仓库元数据 / Repository Metadata
 
 ```bash
-gh repo edit soluna/zlib-cli \
-  --description "Agent-first CLI and skill for Z-Library and Anna's Archive ebook search and downloads" \
+gh repo edit soluna/zlib-anna-skill \
+  --description "Self-contained Agent Skill for Z-Library and Anna's Archive ebook search and downloads" \
   --enable-issues=true \
   --enable-wiki=false
 
-gh repo edit soluna/zlib-cli \
+gh repo edit soluna/zlib-anna-skill \
   --add-topic agent-skill \
   --add-topic anna-archive \
-  --add-topic cli \
   --add-topic ebook \
   --add-topic python \
   --add-topic z-library
 ```
 
-确认 Actions 默认 `GITHUB_TOKEN` 为 read-only，并启用 Dependabot alerts。Secret scanning
-和 push protection 在当前仓库/套餐可用时也应启用。
+## 6. 公开 URL 验证 / Public URL Verification
 
-Confirm that the default Actions `GITHUB_TOKEN` is read-only and enable Dependabot alerts.
-Also enable secret scanning and push protection when available for the repository and plan.
+从新临时目录运行 Codex 安装器，明确使用根路径和 Skill 名称，然后重复隔离验证。不要登录、
+搜索或下载。
 
-## 5. 切换 Public 并立即加固 / Make Public and Harden Immediately
-
-只有历史、验证和 CI 均通过后才执行：
-
-Only after history, validation, and CI pass:
+Run the Codex installer from a fresh temporary location with the explicit root path and Skill
+name, then repeat isolated verification. Do not log in, search, or download.
 
 ```bash
-gh repo edit soluna/zlib-cli \
-  --visibility public \
-  --accept-visibility-change-consequences
+python3 /path/to/install-skill-from-github.py \
+  --repo soluna/zlib-anna-skill \
+  --path . \
+  --name zlib-anna-skill
 ```
 
-随后立即完成以下操作，在完成前不要发布 Release 或对外公告：
+同时以未登录视角检查 README、LICENSE、SECURITY、Issues、Actions 和 Release。
 
-Immediately complete the following before announcing the repository or publishing a release:
+Also check README, LICENSE, SECURITY, Issues, Actions, and the release while logged out.
 
-- 为 `main` 启用 branch protection，要求全部八个 CI checks，并阻止 force push / Protect
-  `main`, require all eight CI checks, and block force pushes.
-- 启用 Private Vulnerability Reporting / Enable Private Vulnerability Reporting.
-- 在未登录浏览器中检查 README、LICENSE、SECURITY、Issues 和 Actions / Check README,
-  license, security policy, issues, and Actions while logged out.
-- 从公开 URL 在全新目录安装并运行 `--version`、`--help` / Install from the public URL in
-  a clean directory and run version/help.
+## 7. 发布 / Release
 
-GitHub 的 Private Vulnerability Reporting 只对 Public 仓库开放，官方说明见
-[Configuring private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configuring-private-vulnerability-reporting-for-a-repository)。
+确认 `CHANGELOG.md` 和 `RELEASE_NOTES.md` 已更新、PR 与 `main` CI 全绿后：
 
-GitHub Private Vulnerability Reporting is available only for public repositories. See
-[GitHub's configuration documentation](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configuring-private-vulnerability-reporting-for-a-repository).
-
-## 6. 创建首个 Release / Create the First Release
+After updating the changelog and release notes and confirming green PR/main CI:
 
 ```bash
-git tag -a v0.1.0 -m "zlib-cli 0.1.0"
-git push origin v0.1.0
-gh release create v0.1.0 \
+git tag -a v0.2.0 -m "zlib-anna-skill 0.2.0"
+git push origin v0.2.0
+gh release create v0.2.0 \
   --verify-tag \
-  --title "zlib-cli 0.1.0" \
+  --title "zlib-anna-skill 0.2.0" \
   --notes-file RELEASE_NOTES.md
 ```
 
-首发暂不上传 PyPI，除非先确认包名、Trusted Publisher 和发布所有权。GitHub/pipx 安装足以
-支持第一阶段用户。
+本项目不发布 wheel、sdist 或 PyPI 包。Release 标记可复现的 Skill 目录版本。
 
-Do not publish the first release to PyPI until package naming, Trusted Publisher, and
-ownership are confirmed. GitHub/pipx installation is sufficient for phase 1.
+This project publishes no wheel, sdist, or PyPI package. A release identifies a reproducible
+version of the Skill directory.
 
-## 发布门槛 / Release Checklist
+## 发布清单 / Release Checklist
 
-- [ ] `origin` 只指向公开仓库 / `origin` points only to the public repository.
-- [ ] 所有提交均为 noreply，无私人邮箱或凭据 / All commits use noreply and contain no secrets.
-- [ ] 本地 release gate 和 GitHub 八个 checks 全绿 / Local release gate and all eight checks pass.
-- [ ] 仓库已 Public，branch protection 与 Private Vulnerability Reporting 已启用 / The
-  repository is public with branch protection and private vulnerability reporting enabled.
-- [ ] 未登录浏览器和全新安装检查通过 / Logged-out and clean-install checks pass.
-- [ ] `v0.1.0` tag 与 Release 已创建 / The `v0.1.0` tag and release exist.
+- [ ] 工作区干净，提交仅使用 noreply / Clean worktree and noreply-only commits.
+- [ ] 本地门禁、Skill validator 和八个 GitHub checks 全绿 / All local and GitHub gates pass.
+- [ ] 依赖锁已重新生成、审计且每项带哈希 / Dependency lock regenerated, audited, hashed.
+- [ ] 隔离安装未读取账号、登录、搜索或下载 / Isolated install reads no account and performs
+  no login, search, or download.
+- [ ] 未登录公共页面与新 URL 安装检查通过 / Logged-out pages and public URL install pass.
+- [ ] Tag 与 Release 标题使用 `zlib-anna-skill` / Tag and release use the current product name.

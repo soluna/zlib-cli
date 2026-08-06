@@ -12,11 +12,13 @@
 - [ ] `pytest -q`
 - [ ] `ruff check .`
 - [ ] `ruff format --check .`
-- [ ] `python -m build`
+- [ ] Skill validator passes
+- [ ] `pip-audit -r scripts/requirements.lock`
+- [ ] Bundled runner smoke test passes with isolated runtime/config directories
 - [ ] No real accounts, tokens, cookies, private URLs, config files, or downloaded books
 - [ ] 不包含真实账号、token、cookie、私人 URL、配置文件或下载电子书
 
 ## Notes / 补充
 
-<!-- Screenshots are usually unnecessary for this CLI. Redact all sensitive values. -->
-<!-- CLI 通常不需要截图。请删除所有敏感值。 -->
+<!-- Screenshots are usually unnecessary for this Skill. Redact all sensitive values. -->
+<!-- Skill 通常不需要截图。请删除所有敏感值。 -->

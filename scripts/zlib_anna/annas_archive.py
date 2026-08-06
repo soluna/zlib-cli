@@ -5,7 +5,7 @@ Anna's Archive 搜索模块
 - 返回书籍元数据和下载链接
 
 License: MIT
-Copyright (c) 2026 zlib-cli contributors
+Copyright (c) 2026 zlib-anna-skill contributors
 """
 
 from __future__ import annotations
@@ -19,7 +19,13 @@ from urllib.parse import quote, urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from network_safety import ALLOW_INSECURE_HTTP_ENV, env_flag, safe_get, validate_http_url
+from .network_safety import (
+    ALLOW_INSECURE_HTTP_ENV,
+    LEGACY_ALLOW_INSECURE_HTTP_ENV,
+    env_flag,
+    safe_get,
+    validate_http_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +157,10 @@ class AnnasArchiveClient:
         self.base_url = (base_url or os.environ.get("ANNAS_BASE_URL") or BASE_URL).rstrip("/")
         validate_http_url(
             self.base_url,
-            require_https=not env_flag(ALLOW_INSECURE_HTTP_ENV),
+            require_https=not env_flag(
+                ALLOW_INSECURE_HTTP_ENV,
+                LEGACY_ALLOW_INSECURE_HTTP_ENV,
+            ),
             resolve_dns=False,
         )
         self.session = requests.Session()

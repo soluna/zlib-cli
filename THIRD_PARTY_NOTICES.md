@@ -1,9 +1,9 @@
 # Third-Party Notices / 第三方声明
 
-中文：`Zlibrary.py` 改编自 `bipinkrish/Zlibrary-API`。以下保留其 MIT 许可证和版权声明。
+中文：`scripts/zlib_anna/zlibrary.py` 改编自 `bipinkrish/Zlibrary-API`。以下保留其 MIT 许可证和版权声明。
 本说明不改变本项目其他文件的许可证。
 
-English: `Zlibrary.py` is adapted from `bipinkrish/Zlibrary-API`. Its MIT license and
+English: `scripts/zlib_anna/zlibrary.py` is adapted from `bipinkrish/Zlibrary-API`. Its MIT license and
 copyright notice are reproduced below. This notice does not change the license of other
 files in this project.
 
