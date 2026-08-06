@@ -8,7 +8,13 @@ Breaking changes may occur during `0.x`.
 
 ## Unreleased / 未发布
 
-- 暂无 / None.
+### Documentation / 文档
+
+- 在 README 首屏增加可直接发送给 Agent 的双语安装指令，并明确 Skill 注册与 CLI 安装是
+  两个步骤 / Added a bilingual first-screen agent installation request and clarified that
+  Skill registration and CLI installation are separate steps.
+- 新增 Codex 根目录 `--path . --name zlib-cli`、`pipx`、验证与其他 Agent 能力边界说明 /
+  Added exact Codex root-path, pipx, verification, and cross-agent capability guidance.
 
 ## 0.1.0 - 2026-08-06
 

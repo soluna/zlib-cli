@@ -1,6 +1,6 @@
 ---
 name: zlib-cli
-description: Search, compare, resolve, and download ebooks from Z-Library or Anna's Archive through an agent-friendly CLI. Use when a user asks to find an ebook, compare available editions or formats, download a selected result, diagnose source access, or continue without a Z-Library account.
+description: Install, set up, search, compare, resolve, and download ebooks from Z-Library or Anna's Archive through an agent-friendly CLI. Use when a user asks to install this Skill, find an ebook, compare available editions or formats, download a selected result, diagnose source access, or continue without a Z-Library account.
 ---
 
 # zlib-cli Skill
@@ -8,11 +8,26 @@ description: Search, compare, resolve, and download ebooks from Z-Library or Ann
 Use `zlib-cli` as the execution layer. Keep search and download as separate user-intent
 steps: finding a book does not automatically authorize downloading it.
 
+## Installation Contract
+
+When the user explicitly asks to install or set up this project:
+
+1. Install the GitHub repository root as the Skill directory. For the Codex installer, use
+   `--repo soluna/zlib-cli --path . --name zlib-cli`; a bare repository URL has no skill path.
+2. Install the executable separately with
+   `pipx install git+https://github.com/soluna/zlib-cli.git`.
+3. Verify both `zlib-cli --version` and `zlib-cli doctor --json`.
+4. Treat installation as permission only to install and diagnose. Do not log in, search, or
+   download until the user separately requests that action.
+5. If the agent cannot run commands, write files, register Skills, or install `pipx`, report
+   the missing capability and provide the commands from `INSTALL.md`. Never claim a partial
+   installation succeeded.
+
 ## Rules
 
 - Always call `zlib-cli` with `--json`.
 - Check that `zlib-cli` is installed before the first call. If it is missing, report the
-  installation command from `README.md`; do not invent a substitute command.
+  installation command from `INSTALL.md`; do not invent a substitute command.
 - Treat stdout as the only machine-readable channel.
 - Treat stderr as human logs or warnings.
 - Never print, copy, store, or commit real passwords, tokens, cookies, or config contents.
