@@ -118,4 +118,4 @@ These are alpha maintenance risks, not current publication blockers.
 - [x] Public 后已启用 branch protection 与 Private Vulnerability Reporting / Branch
   protection and Private Vulnerability Reporting are enabled after making the repository public.
 - [x] 未登录浏览器和公开 URL 全新安装检查通过 / Logged-out and public clean-install checks pass.
-- [ ] `v0.1.0` tag 与 Release 已创建 / The `v0.1.0` tag and release exist.
+- [x] `v0.1.0` tag 与 Release 已创建 / The `v0.1.0` tag and release exist.
