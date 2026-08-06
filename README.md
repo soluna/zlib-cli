@@ -213,15 +213,15 @@ search engines for new domains because fake or expired mirrors can return malici
 ANNAS_BASE_URL=https://verified.example zlib-cli search "query" --source anna --json
 ```
 
-CLI 默认拒绝下载流程访问 localhost、私有 IP、链路本地地址以及解析到内网的域名，并验证
-每一次重定向。仅本地开发镜像可在明确理解风险后设置
+CLI 默认拒绝搜索与下载流程访问 localhost、私有 IP、链路本地地址以及解析到内网的域名，
+并验证每一次重定向。仅本地开发镜像可在明确理解风险后设置
 `ZLIB_CLI_ALLOW_PRIVATE_NETWORK=1`。HTTP 镜像还需要
 `ZLIB_CLI_ALLOW_INSECURE_HTTP=1`。
 
 The CLI rejects localhost, private IPs, link-local addresses, and hostnames resolving to
-private networks during downloads, validating every redirect. Local development mirrors
-require the explicit `ZLIB_CLI_ALLOW_PRIVATE_NETWORK=1` opt-in; plain HTTP also requires
-`ZLIB_CLI_ALLOW_INSECURE_HTTP=1`.
+private networks during search and download flows, validating every redirect. Local
+development mirrors require the explicit `ZLIB_CLI_ALLOW_PRIVATE_NETWORK=1` opt-in; plain
+HTTP also requires `ZLIB_CLI_ALLOW_INSECURE_HTTP=1`.
 
 ## 认证与本地数据 / Authentication and Local Data
 
@@ -291,8 +291,10 @@ pytest -q
 ruff check .
 ruff format --check .
 python3 -m build
-pip-audit
-detect-secrets scan $(git ls-files)
+pip-audit -r requirements.txt
+bandit -q -r zlib_cli.py Zlibrary.py annas_archive.py network_safety.py -ll
+git ls-files -z | xargs -0 detect-secrets scan > /tmp/zlib-cli-secrets.json
+python -c 'import json; data=json.load(open("/tmp/zlib-cli-secrets.json")); raise SystemExit(bool(data["results"]))'
 ```
 
 所有自动化测试默认不访问真实 Z-Library/Anna 服务，也不读取维护者账号。

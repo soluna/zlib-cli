@@ -93,8 +93,9 @@ Before publication, the latest `main` commit must pass:
 - `security`：`pip-audit`、Bandit、`detect-secrets` / dependency, static, and secret scans.
 
 ```bash
-gh run list --repo soluna/zlib-cli --branch main --limit 5
-gh run watch --repo soluna/zlib-cli --exit-status
+run_id=$(gh run list --repo soluna/zlib-cli --branch main --workflow CI \
+  --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run watch "$run_id" --repo soluna/zlib-cli --exit-status
 ```
 
 ## 4. 配置仓库元数据 / Configure Repository Metadata
