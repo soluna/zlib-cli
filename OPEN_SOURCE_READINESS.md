@@ -5,14 +5,15 @@ Review date / 审查日期: 2026-08-06
 ## 结论 / Verdict
 
 中文：当前代码、Skill、测试、打包与中英双语仓库材料达到 `0.1.0` alpha 开源标准。
-本仓库由经过审查的 tracked-file snapshot 建立，不包含前置私有仓库的 Git 历史。公开前只需
-确认新仓库 `main` CI 全绿、历史身份为 noreply，并完成 GitHub 公开与安全设置。
+本仓库由经过审查的 tracked-file snapshot 建立，不包含前置私有仓库的 Git 历史。仓库已经
+公开，`main` CI、noreply 身份、分支保护、Private Vulnerability Reporting、secret scanning
+和 push protection 均已验证。当前没有开源阻塞项。
 
 English: The code, Skill, tests, packaging, and bilingual repository materials meet the
 publication bar for a `0.1.0` alpha. This repository starts from an audited tracked-file
-snapshot and contains no predecessor private Git history. Before publication, confirm green
-CI on the new repository's `main`, noreply-only history, and the GitHub visibility/security
-settings.
+snapshot and contains no predecessor private Git history. It is now public, with green
+`main` CI, noreply-only identity, branch protection, Private Vulnerability Reporting, secret
+scanning, and push protection verified. No open-source blocker remains.
 
 ## 干净仓库边界 / Clean-Repository Boundary
 
@@ -103,13 +104,18 @@ These are alpha maintenance risks, not current publication blockers.
 - `detect-secrets`：最终文件快照 0 findings / zero findings in the final file snapshot.
 - 无账号 Anna 隔离配置实时搜索成功，未下载文件 / An isolated, account-free Anna live
   search succeeded; no file was downloaded.
+- 新公开仓库 `main` 的八个 GitHub CI jobs 全绿 / All eight GitHub CI jobs passed on the
+  new public repository's `main`.
+- 未登录视角可见 README、MIT License 与 Security Policy；匿名 HTTPS clone 和全新 venv
+  安装后 `--version`、`--help` 通过 / README, MIT License, and Security Policy are visible
+  while logged out; anonymous HTTPS clone and fresh-venv version/help checks passed.
 
 ## 最终发布门槛 / Final Release Gate
 
-- [ ] 新仓库历史仅含 noreply 提交 / New repository history contains only noreply commits.
-- [ ] 新仓库 `main` 的八个 GitHub CI checks 全绿 / All eight GitHub CI checks pass on `main`.
-- [ ] `origin` 只指向 `soluna/zlib-cli` / `origin` points only to `soluna/zlib-cli`.
-- [ ] Public 后已启用 branch protection 与 Private Vulnerability Reporting / Branch
+- [x] 新仓库历史仅含 noreply 提交 / New repository history contains only noreply commits.
+- [x] 新仓库 `main` 的八个 GitHub CI checks 全绿 / All eight GitHub CI checks pass on `main`.
+- [x] `origin` 只指向 `soluna/zlib-cli` / `origin` points only to `soluna/zlib-cli`.
+- [x] Public 后已启用 branch protection 与 Private Vulnerability Reporting / Branch
   protection and Private Vulnerability Reporting are enabled after making the repository public.
-- [ ] 未登录浏览器和公开 URL 全新安装检查通过 / Logged-out and public clean-install checks pass.
+- [x] 未登录浏览器和公开 URL 全新安装检查通过 / Logged-out and public clean-install checks pass.
 - [ ] `v0.1.0` tag 与 Release 已创建 / The `v0.1.0` tag and release exist.
