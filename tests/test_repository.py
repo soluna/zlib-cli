@@ -111,6 +111,20 @@ def test_runtime_lock_pins_and_hashes_every_package():
         assert "--hash=sha256:" in text[start:end]
 
 
+def test_runtime_and_development_dependencies_are_installed_separately():
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    install_docs = [
+        (ROOT / path).read_text(encoding="utf-8")
+        for path in ("README.md", "CONTRIBUTING.md", "OPEN_SOURCE_GUIDE.md")
+    ]
+
+    assert "python -m pip install --require-hashes -r scripts/requirements.lock" in workflow
+    assert "python -m pip install -r requirements-dev.txt" in workflow
+
+    for text in [workflow, *install_docs]:
+        assert "scripts/requirements.lock -r requirements-dev.txt" not in text
+
+
 def test_repository_has_no_standalone_python_package_surface():
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 

@@ -14,7 +14,8 @@ git clone https://github.com/soluna/zlib-anna-skill.git
 cd zlib-anna-skill
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install -r scripts/requirements.lock -r requirements-dev.txt
+python -m pip install --require-hashes -r scripts/requirements.lock
+python -m pip install -r requirements-dev.txt
 ```
 
 Windows PowerShell 激活命令为 `.venv\Scripts\Activate.ps1`。

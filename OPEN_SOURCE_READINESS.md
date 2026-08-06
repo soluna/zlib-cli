@@ -88,8 +88,8 @@ These are alpha maintenance risks, not current publication blockers.
 
 ## 验证证据 / Validation Evidence
 
-- Python 3.9 与 3.14：各 `107 passed`；3.9 仅有 Apple 系统 LibreSSL/urllib3 警告 /
-  `107 passed` on Python 3.9 and 3.14; 3.9 emitted only the Apple system LibreSSL warning.
+- Python 3.9 与 3.14：各 `108 passed`；3.9 仅有 Apple 系统 LibreSSL/urllib3 警告 /
+  `108 passed` on Python 3.9 and 3.14; 3.9 emitted only the Apple system LibreSSL warning.
 - 3.9 与 3.14 的真实首次引导、无账号 `auth status --json` 和缓存复用通过 / Real first-use
   bootstrap, account-free auth status, and cache reuse passed on 3.9 and 3.14.
 - Ruff、format、compileall、Skill validator、YAML 与 Markdown 链接检查通过 / Ruff,

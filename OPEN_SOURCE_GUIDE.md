@@ -30,7 +30,8 @@ Run in a fresh virtual environment:
 python3 -m venv .release-venv
 . .release-venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -r scripts/requirements.lock -r requirements-dev.txt
+python -m pip install --require-hashes -r scripts/requirements.lock
+python -m pip install -r requirements-dev.txt
 
 pytest -q
 ruff check .
