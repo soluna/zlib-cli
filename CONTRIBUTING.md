@@ -1,17 +1,17 @@
 # Contributing / 贡献指南
 
-感谢你改进 `zlib-anna-skill`。当前优先级是可靠的单次 Skill 安装、稳定 JSON 协议、安全
+感谢你改进 `zlib-skill`。当前优先级是可靠的单次 Skill 安装、稳定 JSON 协议、安全
 凭据处理、来源降级、可诊断失败，以及不访问真实账号的离线测试。
 
-Thanks for improving `zlib-anna-skill`. Priorities are reliable single-step Skill installation,
+Thanks for improving `zlib-skill`. Priorities are reliable single-step Skill installation,
 a stable JSON contract, safe credential handling, source fallback, diagnosable failures, and
 offline tests that never access real accounts.
 
 ## 开发环境 / Development Setup
 
 ```bash
-git clone https://github.com/soluna/zlib-anna-skill.git
-cd zlib-anna-skill
+git clone https://github.com/soluna/zlib-skill.git
+cd zlib-skill
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --require-hashes -r scripts/requirements.lock

@@ -1,4 +1,4 @@
 interface:
-  display_name: "Z-Library & Anna Books"
-  short_description: "Search and download ebooks from Z-Library and Anna"
-  default_prompt: "Use $zlib-anna-skill to search for an ebook and present matching editions before downloading."
+  display_name: "Z-Library & Anna's Archive"
+  short_description: "Search and download ebooks from Z-Library and Anna's Archive"
+  default_prompt: "Use $zlib-skill to search for an ebook and present matching editions before downloading."

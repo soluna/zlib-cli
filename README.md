@@ -1,23 +1,14 @@
-# zlib-anna-skill
+# zlib-skill
 
 ## 直接让 Agent 安装 / Ask Your Agent to Install
 
-把下面这段完整指令发给具有 GitHub、文件写入和终端权限的 Agent：
+直接把这一句发给支持安装 GitHub Skill 的 Agent：
 
-Send this complete request to an agent with GitHub, filesystem, and terminal access:
+Send this one line to an agent that can install GitHub Skills:
 
-> 请帮我安装这个 Agent Skill：https://github.com/soluna/zlib-anna-skill 。仓库根目录就是
-> Skill 目录，不要另外安装全局 CLI 或使用 `pipx`。安装后请用 Skill 实际目录替换
-> `{baseDir}`，运行 `python3 {baseDir}/scripts/run.py --version` 和
-> `python3 {baseDir}/scripts/run.py auth status --json` 验证。安装阶段不要登录账号、搜索或
-> 下载电子书。
+> 请帮我安装这个 Agent Skill：https://github.com/soluna/zlib-skill
 >
-> Please install this Agent Skill: https://github.com/soluna/zlib-anna-skill . The repository
-> root is the Skill directory. Do not install a separate global CLI or use `pipx`. After
-> installation, replace `{baseDir}` with the installed Skill directory and verify with
-> `python3 {baseDir}/scripts/run.py --version` and
-> `python3 {baseDir}/scripts/run.py auth status --json`. Do not log in, search, or download
-> anything during installation.
+> Please install this Agent Skill: https://github.com/soluna/zlib-skill
 
 这是一个单次安装、自包含的 Agent Skill。执行代码和带哈希的依赖锁都在 Skill 目录内；首次
 实际命令会在用户缓存目录创建专用虚拟环境，不修改系统 Python，也不安装全局命令。
@@ -60,9 +51,9 @@ Prefer the agent request at the top of this README. For Codex, the exact command
 ```bash
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 python3 "$CODEX_HOME/skills/.system/skill-installer/scripts/install-skill-from-github.py" \
-  --repo soluna/zlib-anna-skill \
+  --repo soluna/zlib-skill \
   --path . \
-  --name zlib-anna-skill
+  --name zlib-skill
 ```
 
 然后重新开始一轮 Agent 对话，或手工验证已安装目录：
@@ -70,9 +61,9 @@ python3 "$CODEX_HOME/skills/.system/skill-installer/scripts/install-skill-from-g
 Then start a new agent turn, or manually verify the installed directory:
 
 ```bash
-SKILL_DIR="${CODEX_HOME:-$HOME/.codex}/skills/zlib-anna-skill"
+SKILL_DIR="${CODEX_HOME:-$HOME/.codex}/skills/zlib-skill"
 python3 "$SKILL_DIR/scripts/run.py" --version
-ZLIB_ANNA_CONFIG_DIR=/tmp/zlib-anna-install-check \
+ZLIB_SKILL_CONFIG_DIR=/tmp/zlib-skill-install-check \
   python3 "$SKILL_DIR/scripts/run.py" auth status --json
 ```
 
@@ -104,17 +95,20 @@ automatic file download.
 
 ## 无账号与登录 / Account-Free Use and Login
 
-没有 Z-Library 账号时使用 Anna：
+没有 Z-Library 账号或尚未登录时，Agent 默认继续使用 Anna，不会仅为了增加搜索结果而要求
+登录：
 
-Use Anna without a Z-Library account:
+Without a Z-Library account or login, the agent continues with Anna by default and does not
+request a login merely to improve search coverage:
 
 ```bash
 python3 {baseDir}/scripts/run.py search "query" --source anna --json
 ```
 
-需要 Z-Library 直接下载时，用户应在自己的终端运行：
+只有当用户明确选择 Z-Library 搜索或直接下载时，Agent 才会引导用户在自己的终端运行：
 
-For Z-Library direct downloads, the user should run this in their own terminal:
+Only when the user explicitly chooses Z-Library search or direct download does the agent guide
+them to run this in their own terminal:
 
 ```bash
 python3 {baseDir}/scripts/run.py auth login zlib --email you@example.com
@@ -151,7 +145,7 @@ default. Development opt-ins are listed below.
 
 ## 运行环境 / Runtime
 
-- 默认缓存：`~/.cache/zlib-anna-skill/`，Windows 使用 `%LOCALAPPDATA%` / Default cache.
+- 默认缓存：`~/.cache/zlib-skill/`，Windows 使用 `%LOCALAPPDATA%` / Default cache.
 - 缓存键包含 Skill 版本、Python 版本和依赖锁哈希 / Cache keys include Skill version,
   Python version, and dependency-lock hash.
 - 依赖以 `--require-hashes --only-binary=:all:` 安装 / Dependencies install with required
@@ -163,22 +157,19 @@ default. Development opt-ins are listed below.
 
 | Name | 中文 | English |
 | --- | --- | --- |
-| `ZLIB_ANNA_RUNTIME_DIR` | 覆盖运行缓存根目录 | Override runtime cache root |
-| `ZLIB_ANNA_CONFIG_DIR` | 覆盖账号配置目录 | Override account config directory |
+| `ZLIB_SKILL_RUNTIME_DIR` | 覆盖运行缓存根目录 | Override runtime cache root |
+| `ZLIB_SKILL_CONFIG_DIR` | 覆盖账号配置目录 | Override account config directory |
 | `ANNAS_BASE_URL` | 指定用户验证的 Anna 入口 | Use a user-verified Anna base URL |
 | `ZLIBRARY_DOMAIN` / `ZLIB_DOMAIN` | 指定用户验证的 Z-Library 域名 | Set a user-verified Z-Library domain |
 | `ZLIBRARY_ALLOW_UNTRUSTED_DOMAIN` | 明确允许未知域名接收凭据 | Allow an unknown domain to receive credentials |
 | `HTTPS_PROXY` / `ALL_PROXY` | 网络代理 | Network proxy |
-| `ZLIB_ANNA_ALLOW_PRIVATE_NETWORK` | 允许本地/私网目标，仅限受控开发 | Allow local/private targets for controlled development |
-| `ZLIB_ANNA_ALLOW_INSECURE_HTTP` | 允许 Anna 使用 HTTP，仅限受控开发 | Allow Anna HTTP for controlled development |
-| `ZLIB_ANNA_DEBUG` | 输出 traceback，可能包含敏感数据 | Enable tracebacks that may contain sensitive data |
+| `ZLIB_SKILL_ALLOW_PRIVATE_NETWORK` | 允许本地/私网目标，仅限受控开发 | Allow local/private targets for controlled development |
+| `ZLIB_SKILL_ALLOW_INSECURE_HTTP` | 允许 Anna 使用 HTTP，仅限受控开发 | Allow Anna HTTP for controlled development |
+| `ZLIB_SKILL_DEBUG` | 输出 traceback，可能包含敏感数据 | Enable tracebacks that may contain sensitive data |
 
-旧版 `ZLIB_CLI_CONFIG_DIR`、`ZLIB_CLI_ALLOW_PRIVATE_NETWORK`、
-`ZLIB_CLI_ALLOW_INSECURE_HTTP` 和 `ZLIB_CLI_DEBUG` 在 `0.x` 期间作为兼容别名保留。
+旧版 `ZLIB_ANNA_*` 与 `ZLIB_CLI_*` 在 `0.x` 期间作为兼容别名保留。
 
-Legacy `ZLIB_CLI_CONFIG_DIR`, `ZLIB_CLI_ALLOW_PRIVATE_NETWORK`,
-`ZLIB_CLI_ALLOW_INSECURE_HTTP`, and `ZLIB_CLI_DEBUG` remain compatibility aliases during
-`0.x`.
+Previous `ZLIB_ANNA_*` and `ZLIB_CLI_*` names remain compatibility aliases during `0.x`.
 
 ## 开发与验证 / Development and Verification
 

@@ -2,19 +2,20 @@
 
 ## 推荐指令 / Recommended Request
 
-把下面完整指令发给具有 GitHub、文件写入和终端权限的 Agent：
+直接把这一句发给支持安装 GitHub Skill 的 Agent：
 
-Send this complete request to an agent with GitHub, filesystem, and terminal access:
+Send this one line to an agent that can install GitHub Skills:
 
-> 请帮我安装这个 Agent Skill：https://github.com/soluna/zlib-anna-skill 。仓库根目录就是
-> Skill 目录，不要使用 `pipx` 或安装全局 CLI。安装后请运行 Skill 自带的
-> `scripts/run.py --version` 与 `scripts/run.py auth status --json` 验证，不要登录、搜索或
-> 下载。
+> 请帮我安装这个 Agent Skill：https://github.com/soluna/zlib-skill
 >
-> Please install this Agent Skill: https://github.com/soluna/zlib-anna-skill . The repository
-> root is the Skill directory. Do not use `pipx` or install a global CLI. Verify with the
-> bundled `scripts/run.py --version` and `scripts/run.py auth status --json`. Do not log in,
-> search, or download during installation.
+> Please install this Agent Skill: https://github.com/soluna/zlib-skill
+
+Skill-aware Agent 应自行识别仓库根目录的 `SKILL.md` 并完成安装。下面的精确命令用于不支持
+自动识别时的手工安装和故障排查。
+
+A Skill-aware agent should detect the root `SKILL.md` and complete installation. The exact
+commands below are for manual installation and troubleshooting when automatic detection is
+unavailable.
 
 ## 为什么只需安装一次 / Why Installation Has One Surface
 
@@ -45,9 +46,9 @@ root:
 ```bash
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 python3 "$CODEX_HOME/skills/.system/skill-installer/scripts/install-skill-from-github.py" \
-  --repo soluna/zlib-anna-skill \
+  --repo soluna/zlib-skill \
   --path . \
-  --name zlib-anna-skill
+  --name zlib-skill
 ```
 
 验证安装时使用隔离配置，避免读取任何已有账号：
@@ -55,9 +56,9 @@ python3 "$CODEX_HOME/skills/.system/skill-installer/scripts/install-skill-from-g
 Use isolated config for verification so no existing account is read:
 
 ```bash
-SKILL_DIR="$CODEX_HOME/skills/zlib-anna-skill"
+SKILL_DIR="$CODEX_HOME/skills/zlib-skill"
 python3 "$SKILL_DIR/scripts/run.py" --version
-ZLIB_ANNA_CONFIG_DIR=/tmp/zlib-anna-install-check \
+ZLIB_SKILL_CONFIG_DIR=/tmp/zlib-skill-install-check \
   python3 "$SKILL_DIR/scripts/run.py" auth status --json
 ```
 
@@ -70,9 +71,9 @@ package-index access. Start a new agent turn after installation so the new Skill
 ## 手动安装 / Manual Installation
 
 ```bash
-git clone https://github.com/soluna/zlib-anna-skill.git \
-  "${CODEX_HOME:-$HOME/.codex}/skills/zlib-anna-skill"
-python3 "${CODEX_HOME:-$HOME/.codex}/skills/zlib-anna-skill/scripts/run.py" --version
+git clone https://github.com/soluna/zlib-skill.git \
+  "${CODEX_HOME:-$HOME/.codex}/skills/zlib-skill"
+python3 "${CODEX_HOME:-$HOME/.codex}/skills/zlib-skill/scripts/run.py" --version
 ```
 
 不要覆盖含有用户修改的现有目录。账号配置和下载文件不应保存在 Skill 目录中。
@@ -87,8 +88,8 @@ files must not be stored inside the Skill directory.
 For a manually cloned installation, update only after confirming the worktree is clean:
 
 ```bash
-git -C "${CODEX_HOME:-$HOME/.codex}/skills/zlib-anna-skill" status --short
-git -C "${CODEX_HOME:-$HOME/.codex}/skills/zlib-anna-skill" pull --ff-only
+git -C "${CODEX_HOME:-$HOME/.codex}/skills/zlib-skill" status --short
+git -C "${CODEX_HOME:-$HOME/.codex}/skills/zlib-skill" pull --ff-only
 ```
 
 安装器管理的副本应使用 Agent 的 Skill 更新流程重新安装。依赖锁或 Python 版本变化时，启动器
@@ -98,18 +99,20 @@ Reinstall installer-managed copies through the agent runtime's Skill update flow
 dependency lock or Python version changes, the runner creates a new versioned cache. Old caches
 contain no account data and may be removed after confirming no task is running.
 
-## 从 zlib-cli 0.1.x 迁移 / Migrating from zlib-cli 0.1.x
+## 从旧名称迁移 / Migrating from Earlier Names
 
-1. 安装 `zlib-anna-skill`，不要覆盖旧 Skill / Install `zlib-anna-skill` separately.
+1. 安装 `zlib-skill`，不要覆盖旧 Skill / Install `zlib-skill` separately.
 2. 验证新 Skill 的 `auth status --json` / Verify the new Skill.
-3. 从 Agent 配置中移除旧 `zlib-cli` Skill / Remove the old Skill registration.
-4. 使用 `pipx uninstall zlib-cli` 删除旧全局命令 / Remove the old global command.
+3. 从 Agent 配置中移除旧 `zlib-anna-skill` 或 `zlib-cli` Skill / Remove the old Skill.
+4. 若曾安装 `zlib-cli` 全局命令，使用 `pipx uninstall zlib-cli` 删除 / Remove the old
+   global command if it was installed.
 
-默认账号配置路径在 `0.x` 期间保持兼容。旧 `ZLIB_CLI_*` 环境变量仍可使用，但应迁移到
-README 列出的 `ZLIB_ANNA_*` 名称。
+默认账号配置路径在 `0.x` 期间保持兼容。旧 `ZLIB_ANNA_*` 与 `ZLIB_CLI_*` 环境变量仍可
+使用，但应迁移到 README 列出的 `ZLIB_SKILL_*` 名称。
 
-The default account-config path remains compatible during `0.x`. Legacy `ZLIB_CLI_*`
-environment variables still work, but should migrate to the `ZLIB_ANNA_*` names in the README.
+The default account-config path remains compatible during `0.x`. Previous `ZLIB_ANNA_*` and
+`ZLIB_CLI_*` environment variables still work, but should migrate to the `ZLIB_SKILL_*` names
+in the README.
 
 ## 其他 Agent / Other Agent Runtimes
 
@@ -130,8 +133,8 @@ not login, search, or download.
 ## 验收标准 / Acceptance Criteria
 
 - Skill 目录包含 `SKILL.md`、`agents/openai.yaml` 和 `scripts/run.py` / Required files exist.
-- `--version` 输出 `zlib-anna-skill` 与当前版本 / Version reports the Skill name and version.
+- `--version` 输出 `zlib-skill` 与当前版本 / Version reports the Skill name and version.
 - `auth status --json` 返回 schema 2 JSON，且 `has_token` 为 false（隔离配置） / Isolated
   auth status returns schema 2 JSON with no token.
-- 没有全局 `zlib-anna-skill` 命令或 `pipx` 要求 / No global command or pipx requirement.
+- 没有全局 `zlib-skill` 命令或 `pipx` 要求 / No global command or pipx requirement.
 - 安装期间没有登录、搜索、下载或凭据读取 / No login, search, download, or credential read.

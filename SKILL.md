@@ -1,5 +1,5 @@
 ---
-name: zlib-anna-skill
+name: zlib-skill
 description: Search, compare, resolve, and download ebooks from Z-Library and Anna's Archive with a bundled, self-contained Python runner. Use when a user asks to find an ebook, compare editions or formats, download a selected result, manage Z-Library authentication, diagnose changing or unreachable source domains, or continue without a Z-Library account.
 ---
 
@@ -62,9 +62,10 @@ python3 {baseDir}/scripts/run.py download "<result_id>" --output "<directory>" -
 
 ## No Account
 
-- Continue with Anna when Z-Library returns `AUTH_REQUIRED`.
-- Do not request a Z-Library account merely to improve search coverage.
-- When the user chooses Z-Library direct download, ask them to run:
+- Continue with Anna without asking the user to log in when Z-Library returns `AUTH_REQUIRED`.
+- Do not request a Z-Library login merely to improve search coverage.
+- Only guide the user to log in when they explicitly choose Z-Library search or direct download.
+  Ask them to run:
 
 ```bash
 python3 {baseDir}/scripts/run.py auth login zlib --email <email>

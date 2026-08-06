@@ -5,7 +5,7 @@ Anna's Archive 搜索模块
 - 返回书籍元数据和下载链接
 
 License: MIT
-Copyright (c) 2026 zlib-anna-skill contributors
+Copyright (c) 2026 zlib-skill contributors
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from bs4 import BeautifulSoup
 from .network_safety import (
     ALLOW_INSECURE_HTTP_ENV,
     LEGACY_ALLOW_INSECURE_HTTP_ENV,
+    PREVIOUS_ALLOW_INSECURE_HTTP_ENV,
     env_flag,
     safe_get,
     validate_http_url,
@@ -159,6 +160,7 @@ class AnnasArchiveClient:
             self.base_url,
             require_https=not env_flag(
                 ALLOW_INSECURE_HTTP_ENV,
+                PREVIOUS_ALLOW_INSECURE_HTTP_ENV,
                 LEGACY_ALLOW_INSECURE_HTTP_ENV,
             ),
             resolve_dns=False,

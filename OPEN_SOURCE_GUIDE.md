@@ -1,8 +1,8 @@
 # Open-Source Maintenance Guide / 开源维护手册
 
-本手册面向 `soluna/zlib-anna-skill` 维护者，覆盖干净历史、验证、发布和公开安装检查。
+本手册面向 `soluna/zlib-skill` 维护者，覆盖干净历史、验证、发布和公开安装检查。
 
-This guide is for maintainers of `soluna/zlib-anna-skill`. It covers clean history,
+This guide is for maintainers of `soluna/zlib-skill`. It covers clean history,
 validation, releases, and public-install checks.
 
 ## 1. 历史与工作区 / History and Worktree
@@ -64,13 +64,13 @@ Copy tracked files into a temporary Skill directory and isolate runtime and conf
 
 ```bash
 ROOT=$(mktemp -d)
-mkdir -p "$ROOT/codex-home/skills/zlib-anna-skill"
-git archive HEAD | tar -x -C "$ROOT/codex-home/skills/zlib-anna-skill"
+mkdir -p "$ROOT/codex-home/skills/zlib-skill"
+git archive HEAD | tar -x -C "$ROOT/codex-home/skills/zlib-skill"
 
-ZLIB_ANNA_RUNTIME_DIR="$ROOT/runtime" \
-  python3 "$ROOT/codex-home/skills/zlib-anna-skill/scripts/run.py" --version
-ZLIB_ANNA_RUNTIME_DIR="$ROOT/runtime" ZLIB_ANNA_CONFIG_DIR="$ROOT/config" \
-  python3 "$ROOT/codex-home/skills/zlib-anna-skill/scripts/run.py" auth status --json
+ZLIB_SKILL_RUNTIME_DIR="$ROOT/runtime" \
+  python3 "$ROOT/codex-home/skills/zlib-skill/scripts/run.py" --version
+ZLIB_SKILL_RUNTIME_DIR="$ROOT/runtime" ZLIB_SKILL_CONFIG_DIR="$ROOT/config" \
+  python3 "$ROOT/codex-home/skills/zlib-skill/scripts/run.py" auth status --json
 ```
 
 确认第二次运行复用同一缓存、stdout 是纯 JSON、隔离配置没有 token，并且没有全局命令或
@@ -87,9 +87,9 @@ and no global command or system-Python change occurs.
 `security`, for eight checks total:
 
 ```bash
-run_id=$(gh run list --repo soluna/zlib-anna-skill --branch main --workflow CI \
+run_id=$(gh run list --repo soluna/zlib-skill --branch main --workflow CI \
   --limit 1 --json databaseId --jq '.[0].databaseId')
-gh run watch "$run_id" --repo soluna/zlib-anna-skill --exit-status
+gh run watch "$run_id" --repo soluna/zlib-skill --exit-status
 ```
 
 保持 `main` 分支保护、Private Vulnerability Reporting、Dependabot、secret scanning 和
@@ -101,12 +101,12 @@ push protection enabled. The default Actions `GITHUB_TOKEN` must remain read-onl
 ## 5. 仓库元数据 / Repository Metadata
 
 ```bash
-gh repo edit soluna/zlib-anna-skill \
+gh repo edit soluna/zlib-skill \
   --description "Self-contained Agent Skill for Z-Library and Anna's Archive ebook search and downloads" \
   --enable-issues=true \
   --enable-wiki=false
 
-gh repo edit soluna/zlib-anna-skill \
+gh repo edit soluna/zlib-skill \
   --add-topic agent-skill \
   --add-topic anna-archive \
   --add-topic ebook \
@@ -124,9 +124,9 @@ name, then repeat isolated verification. Do not log in, search, or download.
 
 ```bash
 python3 /path/to/install-skill-from-github.py \
-  --repo soluna/zlib-anna-skill \
+  --repo soluna/zlib-skill \
   --path . \
-  --name zlib-anna-skill
+  --name zlib-skill
 ```
 
 同时以未登录视角检查 README、LICENSE、SECURITY、Issues、Actions 和 Release。
@@ -140,11 +140,11 @@ Also check README, LICENSE, SECURITY, Issues, Actions, and the release while log
 After updating the changelog and release notes and confirming green PR/main CI:
 
 ```bash
-git tag -a v0.2.0 -m "zlib-anna-skill 0.2.0"
-git push origin v0.2.0
-gh release create v0.2.0 \
+git tag -a v0.3.0 -m "zlib-skill 0.3.0"
+git push origin v0.3.0
+gh release create v0.3.0 \
   --verify-tag \
-  --title "zlib-anna-skill 0.2.0" \
+  --title "zlib-skill 0.3.0" \
   --notes-file RELEASE_NOTES.md
 ```
 
@@ -161,4 +161,4 @@ version of the Skill directory.
 - [ ] 隔离安装未读取账号、登录、搜索或下载 / Isolated install reads no account and performs
   no login, search, or download.
 - [ ] 未登录公共页面与新 URL 安装检查通过 / Logged-out pages and public URL install pass.
-- [ ] Tag 与 Release 标题使用 `zlib-anna-skill` / Tag and release use the current product name.
+- [ ] Tag 与 Release 标题使用 `zlib-skill` / Tag and release use the current product name.

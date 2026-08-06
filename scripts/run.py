@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bootstrap and launch the bundled zlib-anna-skill engine."""
+"""Bootstrap and launch the bundled zlib-skill engine."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from zlib_anna import SCHEMA_VERSION, SKILL_VERSION
 SCRIPTS_DIR = Path(__file__).resolve().parent
 LOCK_FILE = SCRIPTS_DIR / "requirements.lock"
 READY_FILE = ".ready.json"
-RUNTIME_DIR_ENV = "ZLIB_ANNA_RUNTIME_DIR"
+RUNTIME_DIR_ENVS = ("ZLIB_SKILL_RUNTIME_DIR", "ZLIB_ANNA_RUNTIME_DIR")
 MINIMUM_PYTHON = (3, 9)
 SETUP_TIMEOUT_SECONDS = 300
 ENGINE_BOOTSTRAP = (
@@ -39,14 +39,14 @@ class RuntimeSetupError(Exception):
 
 
 def runtime_root() -> Path:
-    override = os.environ.get(RUNTIME_DIR_ENV)
+    override = next((os.environ[name] for name in RUNTIME_DIR_ENVS if os.environ.get(name)), None)
     if override:
         return Path(override).expanduser()
     if os.name == "nt" and os.environ.get("LOCALAPPDATA"):
-        return Path(os.environ["LOCALAPPDATA"]) / "zlib-anna-skill" / "Cache"
+        return Path(os.environ["LOCALAPPDATA"]) / "zlib-skill" / "Cache"
     xdg_cache = os.environ.get("XDG_CACHE_HOME")
     base = Path(xdg_cache).expanduser() if xdg_cache else Path.home() / ".cache"
-    return base / "zlib-anna-skill"
+    return base / "zlib-skill"
 
 
 def runtime_fingerprint() -> str:
@@ -184,7 +184,7 @@ def ensure_runtime() -> Path:
     try:
         with runtime_lock(runtime):
             if not runtime_is_ready(runtime):
-                print("Preparing the zlib-anna-skill runtime...", file=sys.stderr)
+                print("Preparing the zlib-skill runtime...", file=sys.stderr)
                 build_runtime(runtime)
     except RuntimeSetupError:
         raise
@@ -216,7 +216,7 @@ def runtime_error_payload(error: RuntimeSetupError) -> dict[str, object]:
 def main(argv: list[str] | None = None) -> int:
     arguments = list(argv) if argv is not None else sys.argv[1:]
     if arguments == ["--version"]:
-        print(f"zlib-anna-skill {SKILL_VERSION}")
+        print(f"zlib-skill {SKILL_VERSION}")
         return 0
     try:
         python = ensure_runtime()
