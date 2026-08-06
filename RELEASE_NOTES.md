@@ -1,43 +1,33 @@
-# zlib-skill 0.3.0
+# zlib-skill 0.3.1
 
 ## 中文
 
-`0.3.0` 将项目、GitHub 仓库和 Skill 标识统一缩短为 `zlib-skill`。
+`0.3.1` 重新设计了用户第一次看到和实际使用这个 Skill 的方式。
 
-主要变化：
+- README 先说明怎么找书、怎么选版本、没有账号能否使用，再提供安装与使用示例。
+- 推荐安装仍然只有一句，手工命令和环境配置留在 `INSTALL.md`。
+- 新增可以直接对 Agent 说的自然语言示例，不要求用户理解来源网站或内部命令。
+- Agent 会把搜索结果整理成简短书单，展示书名、作者、语言、格式和来源。
+- 搜索与下载继续分开；多个版本合理时请用户选择，明确指定时不重复确认。
+- 没有 Z-Library 登录时继续使用 Anna's Archive，不为增加搜索覆盖强迫登录。
+- 运行失败、来源不可用和高级网络配置移到按需加载的故障参考。
 
-- 推荐安装请求缩短为一句：`请帮我安装这个 Agent Skill：https://github.com/soluna/zlib-skill`。
-- 详细安装、隔离验证和故障排查命令移至 `INSTALL.md`，不再塞入首次请求。
-- 默认运行缓存改为 `~/.cache/zlib-skill`；账号配置路径保持兼容，不要求重新登录。
-- `ZLIB_SKILL_*` 成为规范环境变量；`ZLIB_ANNA_*` 与 `ZLIB_CLI_*` 在 `0.x` 保持兼容。
-- 无 Z-Library 登录时默认继续使用 Anna，不会仅为了增加搜索覆盖要求登录。
-- 只有用户明确选择 Z-Library 搜索或直接下载时，Agent 才引导用户在自己的终端安全登录。
-- 运行器版本、Agent 元数据、CI、模板、安全链接和双语文档均更新为新名称。
-
-从 `zlib-anna-skill` 更新时，应将 Skill 安装到新的 `zlib-skill` 目录，并移除旧 Skill
-注册。旧仓库 URL 由 GitHub 重定向到新地址。
+本版本不改变账号存储位置，也不会读取维护者账号。安装验证不会登录、搜索或下载。
 
 ## English
 
-`0.3.0` shortens and aligns the project, GitHub repository, and Skill identifier as
-`zlib-skill`.
+`0.3.1` redesigns how users first encounter and use the Skill.
 
-Highlights:
+- The README begins with finding, choosing, account-free use, and natural request examples.
+- The recommended install remains one line; manual commands and environment configuration stay
+  in `INSTALL.md`.
+- Users can speak naturally without understanding source websites or internal commands.
+- Search results become a short readable book list with title, author, language, format, and
+  source.
+- Search and download remain separate. The agent asks when editions are ambiguous and avoids
+  repeating confirmation when the choice is already explicit.
+- Without Z-Library login, the Skill continues with Anna's Archive instead of forcing login.
+- Runtime, source, and advanced network troubleshooting now loads only when a failure occurs.
 
-- The recommended install request is now one line: `Please install this Agent Skill:
-  https://github.com/soluna/zlib-skill`.
-- Detailed installation, isolated verification, and troubleshooting commands move to
-  `INSTALL.md` instead of burdening the first request.
-- The default runtime cache moves to `~/.cache/zlib-skill`; the account-config path remains
-  compatible, so users do not need to log in again.
-- `ZLIB_SKILL_*` becomes canonical; `ZLIB_ANNA_*` and `ZLIB_CLI_*` remain compatible during
-  `0.x`.
-- Without a Z-Library login, the Skill continues with Anna and does not request login merely
-  to improve search coverage.
-- The agent guides secure terminal login only when the user explicitly chooses Z-Library
-  search or direct download.
-- Runner output, agent metadata, CI, templates, security links, and bilingual documentation
-  now use the new name.
-
-When updating from `zlib-anna-skill`, install into the new `zlib-skill` directory and remove
-the old Skill registration. GitHub redirects the previous repository URL to the new address.
+This release does not change account storage or use the maintainer's account. Installation
+verification performs no login, search, or download.

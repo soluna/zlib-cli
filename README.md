@@ -1,223 +1,148 @@
 # zlib-skill
 
-## 直接让 Agent 安装 / Ask Your Agent to Install
+> 想找一本电子书，不该先研究网站入口、镜像和下载按钮。
 
-直接把这一句发给支持安装 GitHub Skill 的 Agent：
+只要告诉 Agent 书名、作者，或者你记得的一点线索。`zlib-skill` 会帮你查找
+Z-Library 和 Anna's Archive，整理出容易比较的版本，再按你的选择下载。
 
-Send this one line to an agent that can install GitHub Skills:
+## 它能帮你做什么
+
+- 按书名、作者、ISBN 或关键词找书。
+- 把语言、格式、年份和来源整理清楚，方便比较不同版本。
+- 记不清完整书名时，先给出最可能的结果供你确认。
+- 选定版本后下载到本地，并告诉你文件保存在哪里。
+- Z-Library 没有登录或暂时打不开时，继续尝试 Anna's Archive。
+
+搜索和下载是两步。Skill 会先让你看候选结果，不会因为搜到了书就直接下载。
+
+## 快速安装
+
+把这句话发给你的 Agent：
 
 > 请帮我安装这个 Agent Skill：https://github.com/soluna/zlib-skill
->
+
+Agent 会读取仓库并安装 `zlib-skill`。安装本身不会登录账号、搜索或下载电子书。
+
+Agent 不支持直接安装时，请看[安装与迁移说明](INSTALL.md)。
+
+## 装好后这样用
+
+直接说你想做什么，不需要记命令：
+
+```text
+帮我找《百年孤独》的中文 EPUB，先把不同版本列出来。
+
+找一下作者是 Robert C. Martin 的 Clean Code，优先英文版。
+
+我只记得书名里有“设计心理学”，帮我看看可能是哪几本。
+
+下载第 2 本到我的 Downloads 目录。
+
+帮我看看为什么现在搜不到书。
+```
+
+如果多个版本都合理，Agent 会请你选择。你已经明确说了要下载哪一本时，它会直接继续。
+
+## 没有 Z-Library 账号
+
+没有账号也能使用。Skill 会跳过需要登录的 Z-Library 功能，继续通过 Anna's Archive
+搜索，并在可行时尝试下载。
+
+只有当你明确选择了 Z-Library 的结果，Agent 才会引导你登录。登录在你自己的终端中完成，
+密码不会要求你发到聊天里。
+
+## 下载不一定每次都成功
+
+Z-Library 的地址可能变化，Anna's Archive 也可能遇到失效镜像、验证码、会员页面或网络
+限制。遇到这些情况，Agent 会说明卡在哪一步，并给出下一步建议，不会把“找到书”冒充成
+“已经下载”。
+
+## 隐私与使用边界
+
+- 安装和无账号搜索不会读取维护者账号。
+- 登录信息只保存在用户本机，不应提交到仓库或 Issue。
+- 不要在聊天、Issue 或日志中发送密码、token、cookie 或私人下载链接。
+- 只下载你有权访问和使用的内容。
+
+## 文档
+
+- [安装、更新与旧版本迁移](INSTALL.md)
+- [常见问题与支持](SUPPORT.md)
+- [安全政策](SECURITY.md)
+- [变更记录](CHANGELOG.md)
+- [贡献指南](CONTRIBUTING.md)
+
+---
+
+## English
+
+> Finding an ebook should not begin with figuring out mirrors, domains, and download buttons.
+
+Tell your agent the title, author, or whatever detail you remember. `zlib-skill` searches
+Z-Library and Anna's Archive, turns the results into clear choices, and downloads the edition
+you select.
+
+### What it can do
+
+- Search by title, author, ISBN, or keywords.
+- Compare language, format, year, and source across editions.
+- Suggest likely matches when you do not remember the exact title.
+- Download the edition you choose and report where the file was saved.
+- Keep using Anna's Archive when Z-Library is unavailable or not logged in.
+
+Search and download are separate steps. Finding a book never starts a download by itself.
+
+### Quick install
+
+Send this to your agent:
+
 > Please install this Agent Skill: https://github.com/soluna/zlib-skill
 
-这是一个单次安装、自包含的 Agent Skill。执行代码和带哈希的依赖锁都在 Skill 目录内；首次
-实际命令会在用户缓存目录创建专用虚拟环境，不修改系统 Python，也不安装全局命令。
+The agent reads the repository and installs `zlib-skill`. Installation does not log in, search,
+or download anything. See [Installation and Migration](INSTALL.md) when direct installation is
+not supported.
 
-This is a single-install, self-contained Agent Skill. Its execution code and hash-locked
-dependency set live inside the Skill. The first real command creates a dedicated virtual
-environment in the user cache without modifying system Python or installing a global command.
+### Try these requests
 
-## 功能 / What It Does
+```text
+Find an English EPUB of Clean Code by Robert C. Martin and show me the editions first.
 
-面向 Agent 搜索、比较、诊断和下载 Z-Library 与 Anna's Archive 电子书：
+I only remember that the title contains “design psychology.” Show me the likely books.
 
-Search, compare, diagnose, and download ebooks from Z-Library and Anna's Archive through an
-agent-oriented workflow:
+Download result 2 to my Downloads folder.
 
-- Z-Library 登录、动态域名、搜索、元数据与流式下载 / Z-Library authentication,
-  dynamic domains, search, metadata, and streaming downloads.
-- Anna's Archive 无账号搜索与 best-effort 下载 / Account-free Anna's Archive search and
-  best-effort downloads.
-- 稳定 `result_id`、schema 2 JSON、错误码与来源状态 / Stable result IDs, schema 2 JSON,
-  error codes, and source status.
-- 私网阻止、重定向校验、大小限制、文件类型与 Anna MD5 校验 / Private-network blocking,
-  redirect validation, size limits, file-type checks, and Anna MD5 verification.
-- 搜索与下载分离；Agent 必须等待明确下载请求或确认 / Search and download remain separate;
-  the agent waits for an explicit request or confirmation.
-
-| 能力 / Capability | Z-Library | Anna's Archive |
-| --- | --- | --- |
-| 无账号搜索 / Search without account | No | Yes |
-| 登录后直接下载 / Authenticated direct download | Yes | N/A |
-| 自动下载 / Automatic download | Yes | Best-effort |
-| 主要不稳定因素 / Main instability | 域名与账号 / Domains and auth | HTML、镜像、验证码 / HTML, mirrors, captchas |
-
-## 安装 / Installation
-
-推荐使用 README 开头的 Agent 指令。Codex 的精确命令如下：
-
-Prefer the agent request at the top of this README. For Codex, the exact command is:
-
-```bash
-CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
-python3 "$CODEX_HOME/skills/.system/skill-installer/scripts/install-skill-from-github.py" \
-  --repo soluna/zlib-skill \
-  --path . \
-  --name zlib-skill
+Check why book search is not working right now.
 ```
 
-然后重新开始一轮 Agent 对话，或手工验证已安装目录：
+The agent asks you to choose when several editions are plausible. It continues directly when
+your download choice is already clear.
 
-Then start a new agent turn, or manually verify the installed directory:
+### No Z-Library account
 
-```bash
-SKILL_DIR="${CODEX_HOME:-$HOME/.codex}/skills/zlib-skill"
-python3 "$SKILL_DIR/scripts/run.py" --version
-ZLIB_SKILL_CONFIG_DIR=/tmp/zlib-skill-install-check \
-  python3 "$SKILL_DIR/scripts/run.py" auth status --json
-```
+You can still use the Skill. It skips Z-Library features that require login and continues with
+Anna's Archive. The agent only guides you through Z-Library login when you explicitly choose a
+Z-Library result. Login happens in your terminal; never send your password in chat.
 
-第二条命令会在首次执行时准备运行环境，但不会登录、搜索或下载。需要 Python 3.9+，并且首次
-准备依赖时需要访问 Python 包索引。完整安装、更新和迁移说明见 [INSTALL.md](INSTALL.md)。
+### Downloads can fail
 
-The second command prepares the runtime on first use but does not log in, search, or download.
-Python 3.9+ is required, plus package-index access for the first setup. See
-[INSTALL.md](INSTALL.md) for complete installation, update, and migration guidance.
+Z-Library domains can change. Anna's Archive may encounter dead mirrors, captchas, member-only
+pages, or network blocking. The agent explains where the attempt stopped and what you can do
+next. It never reports a search result as a completed download.
 
-## Agent 工作流 / Agent Workflow
+### Privacy and responsible use
 
-Skill 使用 `{baseDir}` 指代包含 `SKILL.md` 的目录：
+- Installation and account-free search do not use the maintainer's account.
+- Login data stays on the user's machine and must not be posted to the repository or an Issue.
+- Never share passwords, tokens, cookies, or private download links in chat or logs.
+- Download only material you are authorized to access and use.
 
-The Skill uses `{baseDir}` for the directory containing `SKILL.md`:
+### Documentation
 
-```bash
-python3 {baseDir}/scripts/run.py search "Python Programming" --source all --json
-python3 {baseDir}/scripts/run.py doctor --json
-python3 {baseDir}/scripts/run.py download "anna:<32-character-md5>" --output ~/Books --json
-```
+- [Installation, updates, and migration](INSTALL.md)
+- [Support](SUPPORT.md)
+- [Security policy](SECURITY.md)
+- [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
 
-搜索不会自动触发下载。Anna 的 `can_attempt_download: true` 只表示执行器可以尝试，不保证
-镜像、验证码或会员页允许自动获取文件。
-
-Search never triggers a download automatically. Anna's `can_attempt_download: true` means
-the runner can try; it does not guarantee that mirrors, captchas, or member pages permit an
-automatic file download.
-
-## 无账号与登录 / Account-Free Use and Login
-
-没有 Z-Library 账号或尚未登录时，Agent 默认继续使用 Anna，不会仅为了增加搜索结果而要求
-登录：
-
-Without a Z-Library account or login, the agent continues with Anna by default and does not
-request a login merely to improve search coverage:
-
-```bash
-python3 {baseDir}/scripts/run.py search "query" --source anna --json
-```
-
-只有当用户明确选择 Z-Library 搜索或直接下载时，Agent 才会引导用户在自己的终端运行：
-
-Only when the user explicitly chooses Z-Library search or direct download does the agent guide
-them to run this in their own terminal:
-
-```bash
-python3 {baseDir}/scripts/run.py auth login zlib --email you@example.com
-```
-
-密码通过安全提示读取，不提供 argv `--password`。token 以本机明文 JSON 保存；POSIX 上目录
-权限为 `0700`、文件为 `0600`。不要把账号、token、cookie、配置、私人下载 URL 或电子书
-提交到仓库或 Issue。
-
-The password is read through a secure prompt; there is no argv `--password`. Tokens are stored
-as local plaintext JSON with POSIX directory/file modes `0700`/`0600`. Never commit or post
-accounts, tokens, cookies, config data, private download URLs, or ebooks.
-
-## 域名变化与网络边界 / Changing Domains and Network Boundaries
-
-Z-Library 地址会变化。执行器按受信任环境变量或缓存、官方入口发现、内置 fallback 的顺序
-探测；未知域名默认不会被访问或接收凭据。不要从任意搜索结果猜测登录域名。
-
-Z-Library addresses change. The runner checks trusted environment/cached values, official
-entry-point discovery, then built-in fallbacks. Unknown domains are not contacted or sent
-credentials by default. Never guess a login domain from arbitrary search results.
-
-```bash
-ZLIBRARY_DOMAIN=verified.example \
-  python3 {baseDir}/scripts/run.py doctor --json
-```
-
-Anna 无法访问时可使用用户独立验证的 `ANNAS_BASE_URL`，或配置 `HTTPS_PROXY` / `ALL_PROXY`。
-默认拒绝 localhost、私有 IP、链路本地地址和解析到内网的主机。开发环境 opt-in 见下表。
-
-When Anna is unreachable, use a user-verified `ANNAS_BASE_URL` or configure `HTTPS_PROXY` /
-`ALL_PROXY`. Localhost, private/link-local IPs, and private-resolving hosts are blocked by
-default. Development opt-ins are listed below.
-
-## 运行环境 / Runtime
-
-- 默认缓存：`~/.cache/zlib-skill/`，Windows 使用 `%LOCALAPPDATA%` / Default cache.
-- 缓存键包含 Skill 版本、Python 版本和依赖锁哈希 / Cache keys include Skill version,
-  Python version, and dependency-lock hash.
-- 依赖以 `--require-hashes --only-binary=:all:` 安装 / Dependencies install with required
-  hashes and binary distributions.
-- 更新锁文件或 Python 后自动建立新环境 / Lock-file or Python changes create a new runtime.
-- stdout 保持 JSON；首次准备日志只写 stderr / Stdout remains JSON; setup logs use stderr.
-
-## 环境变量 / Environment Variables
-
-| Name | 中文 | English |
-| --- | --- | --- |
-| `ZLIB_SKILL_RUNTIME_DIR` | 覆盖运行缓存根目录 | Override runtime cache root |
-| `ZLIB_SKILL_CONFIG_DIR` | 覆盖账号配置目录 | Override account config directory |
-| `ANNAS_BASE_URL` | 指定用户验证的 Anna 入口 | Use a user-verified Anna base URL |
-| `ZLIBRARY_DOMAIN` / `ZLIB_DOMAIN` | 指定用户验证的 Z-Library 域名 | Set a user-verified Z-Library domain |
-| `ZLIBRARY_ALLOW_UNTRUSTED_DOMAIN` | 明确允许未知域名接收凭据 | Allow an unknown domain to receive credentials |
-| `HTTPS_PROXY` / `ALL_PROXY` | 网络代理 | Network proxy |
-| `ZLIB_SKILL_ALLOW_PRIVATE_NETWORK` | 允许本地/私网目标，仅限受控开发 | Allow local/private targets for controlled development |
-| `ZLIB_SKILL_ALLOW_INSECURE_HTTP` | 允许 Anna 使用 HTTP，仅限受控开发 | Allow Anna HTTP for controlled development |
-| `ZLIB_SKILL_DEBUG` | 输出 traceback，可能包含敏感数据 | Enable tracebacks that may contain sensitive data |
-
-旧版 `ZLIB_ANNA_*` 与 `ZLIB_CLI_*` 在 `0.x` 期间作为兼容别名保留。
-
-Previous `ZLIB_ANNA_*` and `ZLIB_CLI_*` names remain compatibility aliases during `0.x`.
-
-## 开发与验证 / Development and Verification
-
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install --require-hashes -r scripts/requirements.lock
-python -m pip install -r requirements-dev.txt
-pytest -q
-ruff check .
-ruff format --check .
-pip-audit -r scripts/requirements.lock
-bandit -q -r scripts/run.py scripts/zlib_anna -ll
-```
-
-修改运行依赖后，用固定命令重新生成通用哈希锁：
-
-After changing runtime dependencies, regenerate the universal hash lock with:
-
-```bash
-uv pip compile scripts/requirements.in --universal --python-version 3.9 \
-  --generate-hashes --output-file scripts/requirements.lock
-```
-
-默认测试不访问真实服务，也不读取维护者账号。网络行为使用 mock；公开 URL 安装和实时来源
-测试必须显式运行并使用隔离配置。
-
-Default tests do not access live services or maintainer accounts. Network behavior is mocked;
-public-URL installation and live-source checks must be explicit and use isolated config.
-
-## 项目文档 / Project Documents
-
-- [安装与迁移 / Installation and Migration](INSTALL.md)
-- [贡献指南 / Contributing](CONTRIBUTING.md)
-- [安全政策 / Security Policy](SECURITY.md)
-- [支持 / Support](SUPPORT.md)
-- [变更记录 / Changelog](CHANGELOG.md)
-- [发布说明 / Release Notes](RELEASE_NOTES.md)
-- [路线图 / Roadmap](ROADMAP.md)
-- [开源维护手册 / Open-source Maintenance Guide](OPEN_SOURCE_GUIDE.md)
-- [第三方声明 / Third-party Notices](THIRD_PARTY_NOTICES.md)
-
-## 归属与许可证 / Attribution and License
-
-`scripts/zlib_anna/zlibrary.py` 改编自
-[bipinkrish/Zlibrary-API](https://github.com/bipinkrish/Zlibrary-API)（MIT）。完整声明见
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。本项目采用 [MIT License](LICENSE)。
-
-`scripts/zlib_anna/zlibrary.py` is adapted from
-[bipinkrish/Zlibrary-API](https://github.com/bipinkrish/Zlibrary-API) (MIT). See
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). This project uses the [MIT License](LICENSE).
+`zlib-skill` is available under the [MIT License](LICENSE). Third-party attribution is listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

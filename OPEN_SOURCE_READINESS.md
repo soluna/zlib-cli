@@ -5,11 +5,11 @@ Review date / 审查日期: 2026-08-06
 ## 结论 / Verdict
 
 中文：`zlib-skill` 的代码、Skill 结构、自包含运行环境、测试、安全门禁和中英双语
-材料达到 `0.3.0` alpha 开源发布标准。仓库保持独立、干净的公开历史，不包含前置私有仓库
+材料达到 `0.3.1` alpha 开源发布标准。仓库保持独立、干净的公开历史，不包含前置私有仓库
 历史或维护者凭据。当前没有开源阻塞项。
 
 English: The code, Skill structure, self-contained runtime, tests, security gates, and
-bilingual materials meet the open-source release bar for `0.3.0` alpha. The repository keeps
+bilingual materials meet the open-source release bar for `0.3.1` alpha. The repository keeps
 an independent clean public history with no predecessor private history or maintainer
 credentials. No open-source blocker remains.
 
@@ -88,8 +88,8 @@ These are alpha maintenance risks, not current publication blockers.
 
 ## 验证证据 / Validation Evidence
 
-- Python 3.9 与 3.14：各 `111 passed`；3.9 仅有 Apple 系统 LibreSSL/urllib3 警告 /
-  `111 passed` on Python 3.9 and 3.14; 3.9 emitted only the Apple system LibreSSL warning.
+- Python 3.9 与 3.14：各 `113 passed`；3.9 仅有 Apple 系统 LibreSSL/urllib3 警告 /
+  `113 passed` on Python 3.9 and 3.14; 3.9 emitted only the Apple system LibreSSL warning.
 - 3.9 与 3.14 的真实首次引导、无账号 `auth status --json` 和缓存复用通过 / Real first-use
   bootstrap, account-free auth status, and cache reuse passed on 3.9 and 3.14.
 - Ruff、format、compileall、Skill validator、YAML 与 Markdown 链接检查通过 / Ruff,
@@ -111,4 +111,4 @@ These are alpha maintenance risks, not current publication blockers.
 - [x] 分支保护、Private Vulnerability Reporting、secret scanning 和 push protection 启用 /
   Repository security settings remain enabled.
 - [x] 未登录页面与新公开 URL 干净安装通过 / Logged-out pages and public install pass.
-- [x] `v0.3.0` tag 与 Release 使用当前名称 / The tag and release use the current name.
+- [x] `v0.3.1` tag 与 Release 使用当前名称 / The tag and release use the current name.
