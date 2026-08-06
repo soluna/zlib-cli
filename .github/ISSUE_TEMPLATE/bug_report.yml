@@ -47,7 +47,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: zlib-anna-skill version / 版本
+      label: zlib-skill version / 版本
       placeholder: python3 {baseDir}/scripts/run.py --version
     validations:
       required: false

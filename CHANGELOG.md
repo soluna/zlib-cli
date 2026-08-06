@@ -6,6 +6,21 @@
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Breaking
 changes may occur during `0.x`.
 
+## 0.3.0 - 2026-08-06
+
+### Changed / 调整
+
+- 项目、GitHub 仓库和 Skill 标识缩短为 `zlib-skill` / Shortened the project,
+  repository, and Skill identifier to `zlib-skill`.
+- README 推荐安装请求缩短为一句，详细验证步骤下沉至安装文档 / Reduced the recommended
+  install request to one line and moved detailed verification into the installation guide.
+- 默认运行缓存迁移到 `~/.cache/zlib-skill`；账号配置路径保持兼容 / Moved the default
+  runtime cache while preserving the account-config path.
+- 规范环境变量改为 `ZLIB_SKILL_*`，旧名称保留兼容 / Made `ZLIB_SKILL_*` canonical while
+  retaining previous aliases.
+- 无 Z-Library 登录时继续使用 Anna，仅在用户明确选择 Z-Library 时引导登录 / Continue
+  with Anna without login and guide Z-Library login only when explicitly needed.
+
 ## 0.2.0 - 2026-08-06
 
 ### Added / 新增

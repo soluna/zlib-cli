@@ -1,4 +1,4 @@
-"""Bundled execution engine for the zlib-anna-skill."""
+"""Bundled execution engine for zlib-skill."""
 
-SKILL_VERSION = "0.2.0"
+SKILL_VERSION = "0.3.0"
 SCHEMA_VERSION = "2"

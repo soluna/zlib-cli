@@ -15,7 +15,7 @@ body:
     id: proposal
     attributes:
       label: Proposed solution / 建议方案
-      description: What should zlib-anna-skill do? / 希望项目怎么做？
+      description: What should zlib-skill do? / 希望项目怎么做？
     validations:
       required: true
   - type: dropdown

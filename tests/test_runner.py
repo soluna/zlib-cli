@@ -19,7 +19,7 @@ RUNNER = ROOT / "scripts" / "run.py"
 def test_runner_reports_skill_version_without_creating_runtime(tmp_path):
     runtime_root = tmp_path / "runtime"
     env = os.environ.copy()
-    env["ZLIB_ANNA_RUNTIME_DIR"] = str(runtime_root)
+    env["ZLIB_SKILL_RUNTIME_DIR"] = str(runtime_root)
 
     result = subprocess.run(
         [sys.executable, str(RUNNER), "--version"],
@@ -30,9 +30,21 @@ def test_runner_reports_skill_version_without_creating_runtime(tmp_path):
     )
 
     assert result.returncode == 0
-    assert result.stdout == "zlib-anna-skill 0.2.0\n"
+    assert result.stdout == "zlib-skill 0.3.0\n"
     assert result.stderr == ""
     assert not runtime_root.exists()
+
+
+def test_runtime_root_prefers_new_name_and_accepts_previous_alias(monkeypatch, tmp_path):
+    canonical = tmp_path / "canonical"
+    previous = tmp_path / "previous"
+    monkeypatch.setenv("ZLIB_SKILL_RUNTIME_DIR", str(canonical))
+    monkeypatch.setenv("ZLIB_ANNA_RUNTIME_DIR", str(previous))
+
+    assert runner.runtime_root() == canonical
+
+    monkeypatch.delenv("ZLIB_SKILL_RUNTIME_DIR")
+    assert runner.runtime_root() == previous
 
 
 def test_runner_reports_runtime_setup_failure_as_safe_json(monkeypatch, capsys):
@@ -48,7 +60,7 @@ def test_runner_reports_runtime_setup_failure_as_safe_json(monkeypatch, capsys):
     assert exit_code == 1
     assert payload["ok"] is False
     assert payload["schema_version"] == "2"
-    assert payload["skill_version"] == "0.2.0"
+    assert payload["skill_version"] == "0.3.0"
     assert payload["error"]["code"] == "RUNTIME_SETUP_FAILED"
     assert payload["error"]["details"] == {
         "step": "install_dependencies",
@@ -59,7 +71,7 @@ def test_runner_reports_runtime_setup_failure_as_safe_json(monkeypatch, capsys):
 
 
 def test_runner_reuses_matching_runtime(monkeypatch, tmp_path):
-    monkeypatch.setenv("ZLIB_ANNA_RUNTIME_DIR", str(tmp_path / "runtime-root"))
+    monkeypatch.setenv("ZLIB_SKILL_RUNTIME_DIR", str(tmp_path / "runtime-root"))
     runtime = runner.runtime_path()
     python = runner.runtime_python(runtime)
     python.parent.mkdir(parents=True)

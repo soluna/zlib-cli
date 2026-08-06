@@ -123,7 +123,7 @@ def client():
 
 @pytest.fixture(autouse=True)
 def allow_mock_network(monkeypatch):
-    monkeypatch.setenv("ZLIB_ANNA_ALLOW_PRIVATE_NETWORK", "1")
+    monkeypatch.setenv("ZLIB_SKILL_ALLOW_PRIVATE_NETWORK", "1")
 
 
 @pytest.fixture

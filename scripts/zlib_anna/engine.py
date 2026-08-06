@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic execution engine bundled with zlib-anna-skill."""
+"""Deterministic execution engine bundled with zlib-skill."""
 
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ from . import SCHEMA_VERSION, SKILL_VERSION, annas_archive
 from .network_safety import (
     ALLOW_INSECURE_HTTP_ENV,
     LEGACY_ALLOW_INSECURE_HTTP_ENV,
+    PREVIOUS_ALLOW_INSECURE_HTTP_ENV,
     UnsafeUrlError,
     env_flag,
     safe_get,
@@ -35,7 +36,14 @@ ANNAS_AVAILABLE = True
 
 
 def default_config_dir() -> Path:
-    override = os.environ.get("ZLIB_ANNA_CONFIG_DIR") or os.environ.get("ZLIB_CLI_CONFIG_DIR")
+    override = next(
+        (
+            os.environ[name]
+            for name in ("ZLIB_SKILL_CONFIG_DIR", "ZLIB_ANNA_CONFIG_DIR", "ZLIB_CLI_CONFIG_DIR")
+            if os.environ.get(name)
+        ),
+        None,
+    )
     if override:
         return Path(override).expanduser()
     xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
@@ -1678,6 +1686,7 @@ def check_anna() -> SourceStatus:
             base_url,
             require_https=not env_flag(
                 ALLOW_INSECURE_HTTP_ENV,
+                PREVIOUS_ALLOW_INSECURE_HTTP_ENV,
                 LEGACY_ALLOW_INSECURE_HTTP_ENV,
             ),
         )
@@ -1893,7 +1902,7 @@ def publication_year(value: str) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="zlib-anna-skill",
+        prog="zlib-skill",
         description="Bundled execution engine for Z-Library and Anna's Archive ebook tasks",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
@@ -2077,7 +2086,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Error [{error.code}]: {error.message}", file=sys.stderr)
         return error.exit_code
     except Exception as exc:
-        if env_flag("ZLIB_ANNA_DEBUG", "ZLIB_CLI_DEBUG"):
+        if env_flag("ZLIB_SKILL_DEBUG", "ZLIB_ANNA_DEBUG", "ZLIB_CLI_DEBUG"):
             raise
         error = SkillError(
             "UNEXPECTED_ERROR",
@@ -2085,7 +2094,7 @@ def main(argv: list[str] | None = None) -> int:
             recoverable=False,
             suggestions=[
                 "Run: python3 {baseDir}/scripts/run.py doctor --json",
-                "Retry with ZLIB_ANNA_DEBUG=1 for a traceback.",
+                "Retry with ZLIB_SKILL_DEBUG=1 for a traceback.",
             ],
             details={"error_type": type(exc).__name__},
         )

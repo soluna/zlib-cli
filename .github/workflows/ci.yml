@@ -59,14 +59,14 @@ jobs:
 
       - name: Create clean Skill directory
         run: |
-          mkdir -p /tmp/codex-home/skills/zlib-anna-skill
-          git archive HEAD | tar -x -C /tmp/codex-home/skills/zlib-anna-skill
+          mkdir -p /tmp/codex-home/skills/zlib-skill
+          git archive HEAD | tar -x -C /tmp/codex-home/skills/zlib-skill
 
       - name: Smoke-test self-contained Skill
         run: |
-          export SKILL_DIR=/tmp/codex-home/skills/zlib-anna-skill
-          export ZLIB_ANNA_RUNTIME_DIR=/tmp/zlib-anna-runtime
-          export ZLIB_ANNA_CONFIG_DIR=/tmp/zlib-anna-config
+          export SKILL_DIR=/tmp/codex-home/skills/zlib-skill
+          export ZLIB_SKILL_RUNTIME_DIR=/tmp/zlib-skill-runtime
+          export ZLIB_SKILL_CONFIG_DIR=/tmp/zlib-skill-config
           python "$SKILL_DIR/scripts/run.py" --version
           python "$SKILL_DIR/scripts/run.py" auth status --json > /tmp/auth-first.json
           python "$SKILL_DIR/scripts/run.py" auth status --json > /tmp/auth-second.json
@@ -79,9 +79,9 @@ jobs:
           assert first == second
           assert first["ok"] is True
           assert first["schema_version"] == "2"
-          assert first["skill_version"] == "0.2.0"
+          assert first["skill_version"] == "0.3.0"
           assert first["zlib"]["has_token"] is False
-          assert len(list(Path("/tmp/zlib-anna-runtime").glob("*/.ready.json"))) == 1
+          assert len(list(Path("/tmp/zlib-skill-runtime").glob("*/.ready.json"))) == 1
           PY
 
   security:

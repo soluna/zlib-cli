@@ -11,12 +11,12 @@ without backward compatibility.
 
 不要在公开 Issue 中发布漏洞细节、真实账号、token、cookie、配置、私人下载 URL、traceback
 或个人信息。请使用 GitHub
-[私密漏洞报告](https://github.com/soluna/zlib-anna-skill/security/advisories/new)，将敏感值
+[私密漏洞报告](https://github.com/soluna/zlib-skill/security/advisories/new)，将敏感值
 替换为 `<redacted>` 并提供最小复现。
 
 Do not post vulnerability details, real accounts, tokens, cookies, config data, private
 download URLs, tracebacks, or personal information in public issues. Use
-[GitHub private vulnerability reporting](https://github.com/soluna/zlib-anna-skill/security/advisories/new),
+[GitHub private vulnerability reporting](https://github.com/soluna/zlib-skill/security/advisories/new),
 replace sensitive values with `<redacted>`, and include the smallest reproduction.
 
 ## 报告内容 / What to Include

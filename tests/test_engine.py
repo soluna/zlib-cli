@@ -23,7 +23,7 @@ EPUB_MD5 = hashlib.md5(EPUB_BODY, usedforsecurity=False).hexdigest()
 
 @pytest.fixture(autouse=True)
 def allow_mock_network(monkeypatch):
-    monkeypatch.setenv("ZLIB_ANNA_ALLOW_PRIVATE_NETWORK", "1")
+    monkeypatch.setenv("ZLIB_SKILL_ALLOW_PRIVATE_NETWORK", "1")
 
 
 class FakeResponse:
@@ -77,17 +77,25 @@ def test_load_config_empty(temp_config):
 
 def test_default_config_dir_prefers_skill_named_override(monkeypatch, tmp_path):
     preferred = tmp_path / "preferred"
+    previous = tmp_path / "previous"
     legacy = tmp_path / "legacy"
-    monkeypatch.setenv("ZLIB_ANNA_CONFIG_DIR", str(preferred))
+    monkeypatch.setenv("ZLIB_SKILL_CONFIG_DIR", str(preferred))
+    monkeypatch.setenv("ZLIB_ANNA_CONFIG_DIR", str(previous))
     monkeypatch.setenv("ZLIB_CLI_CONFIG_DIR", str(legacy))
 
     assert engine.default_config_dir() == preferred
 
 
-def test_default_config_dir_accepts_legacy_override(monkeypatch, tmp_path):
+def test_default_config_dir_accepts_previous_override_aliases(monkeypatch, tmp_path):
+    previous = tmp_path / "previous"
     legacy = tmp_path / "legacy"
-    monkeypatch.delenv("ZLIB_ANNA_CONFIG_DIR", raising=False)
+    monkeypatch.delenv("ZLIB_SKILL_CONFIG_DIR", raising=False)
+    monkeypatch.setenv("ZLIB_ANNA_CONFIG_DIR", str(previous))
     monkeypatch.setenv("ZLIB_CLI_CONFIG_DIR", str(legacy))
+
+    assert engine.default_config_dir() == previous
+
+    monkeypatch.delenv("ZLIB_ANNA_CONFIG_DIR", raising=False)
 
     assert engine.default_config_dir() == legacy
 

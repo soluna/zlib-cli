@@ -6,7 +6,7 @@ Zlibrary-API / Zlibrary.py
 For more information, see:
 https://github.com/bipinkrish/Zlibrary-API/
 
-Modified by zlib-anna-skill contributors: added dynamic mirrors, timeouts, streaming downloads,
+Modified by zlib-skill contributors: added dynamic mirrors, timeouts, streaming downloads,
 and network-target validation. See THIRD_PARTY_NOTICES.md for the upstream MIT license.
 """
 
