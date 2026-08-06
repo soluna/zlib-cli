@@ -6,6 +6,19 @@
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Breaking
 changes may occur during `0.x`.
 
+## 0.3.1 - 2026-08-06
+
+### Changed / 调整
+
+- README 改为以找书、选版本、下载和无账号使用为主线的用户说明 / Reworked the README
+  around finding, choosing, downloading, and account-free use.
+- 推荐安装之后直接给出自然语言使用示例，技术安装细节移至 `INSTALL.md` / Added natural
+  request examples and moved technical installation details out of the main page.
+- Skill 按用户旅程组织，并将故障与网络说明改为按需读取 / Organized the Skill around the
+  user journey and moved troubleshooting behind an on-demand reference.
+- Agent 默认展示简短可读的候选书单，不向用户倾倒原始 JSON / The agent now presents a
+  short readable list instead of exposing raw JSON.
+
 ## 0.3.0 - 2026-08-06
 
 ### Changed / 调整

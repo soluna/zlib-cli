@@ -22,6 +22,7 @@ REQUIRED_PUBLIC_FILES = {
     "agents/openai.yaml",
 }
 REQUIRED_SKILL_FILES = {
+    "references/troubleshooting.md",
     "scripts/run.py",
     "scripts/requirements.in",
     "scripts/requirements.lock",
@@ -71,14 +72,30 @@ def test_skill_frontmatter_uses_new_name_and_supported_keys():
 
 def test_readme_leads_with_single_skill_install_request():
     text = (ROOT / "README.md").read_text(encoding="utf-8")
-    first_screen = "\n".join(text.splitlines()[:35])
+    first_screen = "\n".join(text.splitlines()[:60])
 
-    assert "直接让 Agent 安装 / Ask Your Agent to Install" in first_screen
+    assert "只要告诉 Agent 书名、作者，或者你记得的一点线索" in first_screen
+    assert "快速安装" in first_screen
     assert "> 请帮我安装这个 Agent Skill：https://github.com/soluna/zlib-skill" in first_screen
-    assert "> Please install this Agent Skill: https://github.com/soluna/zlib-skill" in first_screen
     assert "仓库根目录就是" not in first_screen
     assert "{baseDir}" not in first_screen
     assert "pipx" not in first_screen
+    assert "ZLIB_SKILL_" not in first_screen
+    assert "schema" not in first_screen
+
+
+def test_readme_shows_natural_requests_and_keeps_technical_details_elsewhere():
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "装好后这样用" in text
+    assert "帮我找《" in text
+    assert "下载第 2 本" in text
+    assert "没有 Z-Library 账号" in text
+    assert "## English" in text
+    assert "Please install this Agent Skill: https://github.com/soluna/zlib-skill" in text
+    assert "ZLIB_SKILL_RUNTIME_DIR" not in text
+    assert "--require-hashes" not in text
+    assert "schema 2" not in text
 
 
 def test_install_guide_has_one_install_surface_and_isolated_verification():
@@ -96,19 +113,30 @@ def test_install_guide_has_one_install_surface_and_isolated_verification():
 
 def test_skill_invokes_only_the_bundled_runner():
     text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    troubleshooting = (ROOT / "references" / "troubleshooting.md").read_text(encoding="utf-8")
 
     assert "python3 {baseDir}/scripts/run.py" in text
-    assert "pipx" in text  # Explicitly forbidden as a fallback.
-    assert "pipx install" not in text
+    assert "references/troubleshooting.md" in text
+    assert "pipx" in troubleshooting  # Explicitly forbidden as a fallback.
+    assert "pipx install" not in troubleshooting
     assert "zlib-cli " not in text
 
 
 def test_skill_uses_anna_without_login_and_guides_login_only_when_needed():
     text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
 
-    assert "Continue with Anna without asking the user to log in" in text
-    assert "Do not request a Z-Library login merely to improve search coverage" in text
-    assert "Only guide the user to log in when they explicitly choose Z-Library" in text
+    assert "keep searching with Anna's Archive" in text
+    assert "Do not ask them to log in just to get more results" in text
+    assert "explicitly wants a Z-Library result" in text
+
+
+def test_skill_presents_clear_choices_before_downloading():
+    text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+
+    assert "Show a short, readable list" in text
+    assert "title, author, language, format" in text
+    assert "Never turn a search into a download without the user's clear intent" in text
+    assert 'download "<result_id>"' in text
 
 
 def test_runtime_lock_pins_and_hashes_every_package():

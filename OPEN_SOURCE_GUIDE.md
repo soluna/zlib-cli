@@ -140,11 +140,11 @@ Also check README, LICENSE, SECURITY, Issues, Actions, and the release while log
 After updating the changelog and release notes and confirming green PR/main CI:
 
 ```bash
-git tag -a v0.3.0 -m "zlib-skill 0.3.0"
-git push origin v0.3.0
-gh release create v0.3.0 \
+git tag -a v0.3.1 -m "zlib-skill 0.3.1"
+git push origin v0.3.1
+gh release create v0.3.1 \
   --verify-tag \
-  --title "zlib-skill 0.3.0" \
+  --title "zlib-skill 0.3.1" \
   --notes-file RELEASE_NOTES.md
 ```
 

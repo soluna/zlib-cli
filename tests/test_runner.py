@@ -30,7 +30,7 @@ def test_runner_reports_skill_version_without_creating_runtime(tmp_path):
     )
 
     assert result.returncode == 0
-    assert result.stdout == "zlib-skill 0.3.0\n"
+    assert result.stdout == "zlib-skill 0.3.1\n"
     assert result.stderr == ""
     assert not runtime_root.exists()
 
@@ -60,7 +60,7 @@ def test_runner_reports_runtime_setup_failure_as_safe_json(monkeypatch, capsys):
     assert exit_code == 1
     assert payload["ok"] is False
     assert payload["schema_version"] == "2"
-    assert payload["skill_version"] == "0.3.0"
+    assert payload["skill_version"] == "0.3.1"
     assert payload["error"]["code"] == "RUNTIME_SETUP_FAILED"
     assert payload["error"]["details"] == {
         "step": "install_dependencies",
