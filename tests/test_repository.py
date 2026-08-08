@@ -122,12 +122,12 @@ def test_skill_invokes_only_the_bundled_runner():
     assert "zlib-cli " not in text
 
 
-def test_skill_uses_anna_without_login_and_guides_login_only_when_needed():
+def test_skill_searches_both_sources_without_login_and_guides_login_only_for_download():
     text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
 
-    assert "keep searching with Anna's Archive" in text
-    assert "Do not ask them to log in just to get more results" in text
-    assert "explicitly wants a Z-Library result" in text
+    assert "Search Z-Library anonymously as well as Anna's Archive" in text
+    assert "Do not ask the user to\nlog in just to get more results" in text
+    assert "explicitly wants to download a Z-Library result" in text
 
 
 def test_skill_presents_clear_choices_before_downloading():

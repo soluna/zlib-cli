@@ -11,7 +11,8 @@ Z-Library 和 Anna's Archive，整理出容易比较的版本，再按你的选�
 - 把语言、格式、年份和来源整理清楚，方便比较不同版本。
 - 记不清完整书名时，先给出最可能的结果供你确认。
 - 选定版本后下载到本地，并告诉你文件保存在哪里。
-- Z-Library 没有登录或暂时打不开时，继续尝试 Anna's Archive。
+- 无账号也会同时搜索 Z-Library 与 Anna's Archive；下载 Z-Library 结果时才可能需要登录。
+- 已知地址失效时，自动切换经过验证的 Z-Library 域名与 Anna 官方备用地址。
 
 搜索和下载是两步。Skill 会先让你看候选结果，不会因为搜到了书就直接下载。
 
@@ -45,17 +46,20 @@ Agent 不支持直接安装时，请看[安装与迁移说明](INSTALL.md)。
 
 ## 没有 Z-Library 账号
 
-没有账号也能使用。Skill 会跳过需要登录的 Z-Library 功能，继续通过 Anna's Archive
-搜索，并在可行时尝试下载。
+没有账号也能使用。Skill 会匿名搜索 Z-Library，同时搜索 Anna's Archive；搜索本身不要求
+Z-Library 账号。只有下载选定的 Z-Library 结果或使用账号功能时，才可能需要登录。
 
-只有当你明确选择了 Z-Library 的结果，Agent 才会引导你登录。登录在你自己的终端中完成，
-密码不会要求你发到聊天里。
+只有当你明确要求下载 Z-Library 结果时，Agent 才会按需引导你登录。登录在你自己的终端中
+完成，密码不会要求你发到聊天里。
 
 ## 下载不一定每次都成功
 
 Z-Library 的地址可能变化，Anna's Archive 也可能遇到失效镜像、验证码、会员页面或网络
 限制。遇到这些情况，Agent 会说明卡在哪一步，并给出下一步建议，不会把“找到书”冒充成
 “已经下载”。
+
+Skill 会从 Z-Library 的域名发现接口合并可用地址，并在请求失败时继续尝试下一地址；Anna's
+Archive 默认轮换其官方列出的 `.gl`、`.pk`、`.gd` 地址。自定义地址仍需由用户独立核验。
 
 ## 隐私与使用边界
 
@@ -88,7 +92,10 @@ you select.
 - Compare language, format, year, and source across editions.
 - Suggest likely matches when you do not remember the exact title.
 - Download the edition you choose and report where the file was saved.
-- Keep using Anna's Archive when Z-Library is unavailable or not logged in.
+- Search both Z-Library and Anna's Archive without a Z-Library account; login is only needed for
+  downloads or account-only features.
+- Rotate through verified Z-Library domains and official Anna's Archive alternatives when an
+  address fails.
 
 Search and download are separate steps. Finding a book never starts a download by itself.
 
@@ -119,15 +126,20 @@ your download choice is already clear.
 
 ### No Z-Library account
 
-You can still use the Skill. It skips Z-Library features that require login and continues with
-Anna's Archive. The agent only guides you through Z-Library login when you explicitly choose a
-Z-Library result. Login happens in your terminal; never send your password in chat.
+You can still use the Skill. It searches Z-Library anonymously alongside Anna's Archive; search
+itself does not require a Z-Library account. The agent only guides you through login when you
+explicitly ask to download a Z-Library result or use an account-only feature. Login happens in
+your terminal; never send your password in chat.
 
 ### Downloads can fail
 
 Z-Library domains can change. Anna's Archive may encounter dead mirrors, captchas, member-only
 pages, or network blocking. The agent explains where the attempt stopped and what you can do
 next. It never reports a search result as a completed download.
+
+The Skill merges domains returned by Z-Library's discovery endpoints and retries the next domain
+when a request fails. For Anna's Archive it rotates through the officially listed `.gl`, `.pk`,
+and `.gd` addresses. User-supplied mirrors still need independent verification.
 
 ### Privacy and responsible use
 

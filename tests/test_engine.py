@@ -195,6 +195,19 @@ def test_config_status_reports_zlib_domain_override(temp_config):
     assert status["zlib"]["domain_env"] == "env.example"
 
 
+def test_config_status_lists_official_anna_fallback_origins(temp_config):
+    with patch(
+        "zlib_anna.engine.anna_base_urls",
+        return_value=["https://annas-archive.gl", "https://annas-archive.pk/path"],
+    ):
+        status = engine.config_status()
+
+    assert status["anna"]["candidate_origins"] == [
+        "https://annas-archive.gl",
+        "https://annas-archive.pk",
+    ]
+
+
 def test_mask_email_handles_empty_local_part():
     assert engine.mask_email("@example.com") == "*@example.com"
 
@@ -216,6 +229,33 @@ def test_fetch_domains_filters_unusable_domains():
         domains = engine.fetch_domains()
 
     assert domains == ["z-library.example"]
+
+
+def test_fetch_domains_unions_all_discovery_entry_points():
+    first = MagicMock(status_code=200)
+    first.json.return_value = {
+        "success": True,
+        "domains": [
+            {"domain": "one.example", "contentAvailable": True, "isRedirector": False},
+            {"domain": "shared.example", "contentAvailable": True, "isRedirector": False},
+        ],
+    }
+    second = MagicMock(status_code=200)
+    second.json.return_value = {
+        "success": True,
+        "domains": [
+            {"domain": "shared.example", "contentAvailable": True, "isRedirector": False},
+            {"domain": "two.example", "contentAvailable": True, "isRedirector": False},
+        ],
+    }
+
+    with (
+        patch("zlib_anna.engine.ENTRY_POINTS", ["https://one.example", "https://two.example"]),
+        patch("zlib_anna.engine.requests.get", side_effect=[first, second]),
+    ):
+        domains = engine.fetch_domains()
+
+    assert domains == ["one.example", "shared.example", "two.example"]
 
 
 def test_test_domain_handles_request_errors():
@@ -273,6 +313,21 @@ def test_find_working_domain_does_not_contact_untrusted_override(monkeypatch):
     assert checks[0]["domain"] == "untrusted.example"
     assert checks[0]["reason"] == "untrusted_domain"
     assert "untrusted.example" not in {call.args[0] for call in mock_test_domain.call_args_list}
+
+
+def test_find_working_domain_reuses_discovery_cache():
+    discovery_cache = {}
+    with (
+        patch(
+            "zlib_anna.engine.fetch_domains", return_value=["one.example", "two.example"]
+        ) as fetch,
+        patch("zlib_anna.engine.test_domain", return_value=False),
+    ):
+        engine.find_working_domain(discovery_cache=discovery_cache)
+        engine.find_working_domain(discovery_cache=discovery_cache)
+
+    assert discovery_cache == {"domains": ["one.example", "two.example"]}
+    fetch.assert_called_once_with()
 
 
 def test_download_dir_status_reports_creatable_when_home_is_missing(tmp_path):
@@ -366,7 +421,7 @@ def test_parse_result_ref_rejects_malformed_ids(value):
     assert exc.value.code == "INVALID_RESULT_ID"
 
 
-def test_search_all_falls_back_to_anna_without_zlib_auth(temp_config):
+def test_search_all_includes_anonymous_zlib_without_auth(temp_config):
     args = argparse.Namespace(
         query="python",
         source="all",
@@ -397,14 +452,35 @@ def test_search_all_falls_back_to_anna_without_zlib_auth(temp_config):
         can_download=True,
         status="ok",
     )
+    zlib_book = {
+        "result_id": "zlib:123:abc",
+        "source": "zlib",
+        "id": "123",
+        "hash": "abc",
+        "title": "Anonymous Z-Library result",
+    }
+    zlib_status = engine.SourceStatus(
+        source="zlib",
+        available=True,
+        authenticated=False,
+        can_search=True,
+        can_download=False,
+        status="ok",
+        details={"search_mode": "anonymous"},
+    )
 
-    with patch("zlib_anna.engine.search_anna", return_value=([anna_book], anna_status)):
+    with (
+        patch("zlib_anna.engine.search_zlib", return_value=([zlib_book], zlib_status)),
+        patch("zlib_anna.engine.search_anna", return_value=([anna_book], anna_status)),
+    ):
         payload = engine.cmd_search(args)
 
     assert payload["ok"] is True
-    assert payload["results"] == [anna_book]
+    assert payload["results"] == [zlib_book, anna_book]
     assert payload["sources"][0]["source"] == "zlib"
-    assert payload["sources"][0]["status"] == "auth_required"
+    assert payload["sources"][0]["status"] == "ok"
+    assert payload["sources"][0]["authenticated"] is False
+    assert payload["sources"][0]["can_search"] is True
 
 
 def test_search_all_continues_when_zlib_source_errors(temp_config):
@@ -447,13 +523,80 @@ def test_search_all_continues_when_zlib_source_errors(temp_config):
     assert payload["sources"][0]["status"] == "error"
 
 
-def test_search_zlib_without_auth_is_error(temp_config):
-    args = argparse.Namespace(source="zlib")
+def test_search_zlib_without_auth_uses_anonymous_search(temp_config):
+    args = argparse.Namespace(
+        query="python",
+        source="zlib",
+        limit=10,
+        page=1,
+        year_from=None,
+        year_to=None,
+        lang=None,
+        ext=None,
+        order=None,
+    )
+    client = MagicMock()
+    client.getDomain.return_value = "z-library.sk"
+    client.isLoggedIn.return_value = False
+    client.search.return_value = {
+        "success": 1,
+        "books": [{"id": "123", "hash": "abc", "title": "Anonymous result"}],
+    }
 
-    with pytest.raises(engine.SkillError) as exc:
-        engine.search_zlib(args, {})
+    with (
+        patch("zlib_anna.engine.find_working_domain", return_value=("z-library.sk", [])),
+        patch("zlib_anna.engine.init_zlibrary", return_value=client) as mock_init,
+    ):
+        books, status = engine.search_zlib(args, {})
 
-    assert exc.value.code == "AUTH_REQUIRED"
+    assert [book["title"] for book in books] == ["Anonymous result"]
+    assert books[0]["requires_account"] is True
+    assert books[0]["can_download"] is False
+    assert status.available is True
+    assert status.authenticated is False
+    assert status.can_search is True
+    assert status.can_download is False
+    mock_init.assert_called_once_with(
+        {}, require_auth=False, update_config=False, resolved_domain="z-library.sk"
+    )
+
+
+def test_search_zlib_switches_domain_when_search_request_fails(temp_config):
+    args = argparse.Namespace(
+        query="python",
+        source="zlib",
+        limit=10,
+        page=1,
+        year_from=None,
+        year_to=None,
+        lang=None,
+        ext=None,
+        order=None,
+    )
+    first = MagicMock()
+    first.getDomain.return_value = "one.example"
+    first.search.side_effect = engine.requests.ConnectionError("mirror failed")
+    second = MagicMock()
+    second.getDomain.return_value = "two.example"
+    second.isLoggedIn.return_value = False
+    second.search.return_value = {"success": 1, "books": []}
+
+    with (
+        patch(
+            "zlib_anna.engine.find_working_domain",
+            side_effect=[
+                ("one.example", [{"domain": "one.example", "available": True}]),
+                ("two.example", [{"domain": "two.example", "available": True}]),
+            ],
+        ) as mock_find,
+        patch("zlib_anna.engine.init_zlibrary", side_effect=[first, second]),
+    ):
+        books, status = engine.search_zlib(args, {})
+
+    assert books == []
+    assert status.details["domain"] == "two.example"
+    assert status.details["failed_domains"] == ["one.example"]
+    assert mock_find.call_args_list[1].kwargs["excluded"] == {"one.example"}
 
 
 def test_normalize_anna_book_marks_download_as_best_effort():
@@ -516,6 +659,80 @@ def test_anna_filters_year_and_language_locally():
     assert status.details["ignored_filters"] == ["order"]
 
 
+def test_search_anna_switches_to_next_official_base_url():
+    args = argparse.Namespace(
+        query="python",
+        source="anna",
+        limit=10,
+        page=1,
+        year_from=None,
+        year_to=None,
+        lang=None,
+        ext=None,
+        order=None,
+    )
+    failed = MagicMock()
+    failed.search.side_effect = engine.requests.ConnectionError("first mirror failed")
+    working = MagicMock()
+    working.search.return_value = [{"md5": "a" * 32, "title": "Fallback result"}]
+
+    with (
+        patch(
+            "zlib_anna.engine.anna_base_urls",
+            return_value=["https://annas-archive.gl", "https://annas-archive.pk"],
+        ),
+        patch(
+            "zlib_anna.engine.annas_archive.AnnasArchiveClient",
+            side_effect=[failed, working],
+        ) as factory,
+    ):
+        books, status = engine.search_anna(args)
+
+    assert [book["title"] for book in books] == ["Fallback result"]
+    assert status.details["base_origin"] == "https://annas-archive.pk"
+    assert status.details["failed_origins"] == ["https://annas-archive.gl"]
+    assert [call.kwargs["base_url"] for call in factory.call_args_list] == [
+        "https://annas-archive.gl",
+        "https://annas-archive.pk",
+    ]
+
+
+def test_anna_links_switches_base_url_after_failure():
+    failed = MagicMock()
+    failed.get_download_links.side_effect = engine.requests.ConnectionError("mirror failed")
+    working = MagicMock()
+    working.get_download_links.return_value = {"detail_url": "https://annas-archive.pk/md5/x"}
+
+    with (
+        patch(
+            "zlib_anna.engine.anna_base_urls",
+            return_value=["https://annas-archive.gl", "https://annas-archive.pk"],
+        ),
+        patch(
+            "zlib_anna.engine.annas_archive.AnnasArchiveClient",
+            side_effect=[failed, working],
+        ),
+    ):
+        links = engine.anna_links("a" * 32)
+
+    assert links["detail_url"].startswith("https://annas-archive.pk/")
+
+
+def test_check_zlib_reports_anonymous_search_without_authentication():
+    with patch(
+        "zlib_anna.engine.find_working_domain",
+        return_value=("z-library.sk", [{"domain": "z-library.sk", "available": True}]),
+    ):
+        status = engine.check_zlib({})
+
+    assert status.available is True
+    assert status.authenticated is False
+    assert status.can_search is True
+    assert status.can_download is False
+    assert status.status == "ok"
+    assert status.details["search_mode"] == "anonymous"
+
+
 def test_search_anna_sanitizes_upstream_failure(monkeypatch):
     args = argparse.Namespace(
         query="private query",
@@ -542,6 +759,12 @@ def test_search_anna_sanitizes_upstream_failure(monkeypatch):
     assert status.details == {
         "base_origin": "https://annas.example",
         "error_type": "ConnectionError",
+        "failed_origins": [
+            "https://annas.example",
+            "https://annas-archive.gl",
+            "https://annas-archive.pk",
+            "https://annas-archive.gd",
+        ],
     }
     assert "token" not in json.dumps(status.to_dict())
 

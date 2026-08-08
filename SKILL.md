@@ -48,9 +48,12 @@ temporary or private download URLs unless the user explicitly asks for them.
 
 ## When the User Has No Z-Library Login
 
-If Z-Library needs authentication, keep searching with Anna's Archive. Do not ask them to log in just to get more results.
+Search Z-Library anonymously as well as Anna's Archive. A Z-Library account is not required for
+search, but it may be required to download a selected Z-Library result. Do not ask the user to
+log in just to get more results.
 
-Only offer login when the user explicitly wants a Z-Library result or direct Z-Library search.
+Only offer login when the user explicitly wants to download a Z-Library result or use an
+account-only Z-Library feature.
 Ask them to run this in their own terminal:
 
 ```bash
@@ -74,5 +77,8 @@ action. Never report “downloaded” unless a file was actually saved and verif
 - Keep search and download separate, and preserve the user's chosen edition.
 - Do not weaken network protections or trust an unfamiliar source domain without the user's
   explicit approval.
+- The runner automatically rotates among verified Z-Library domains and the official Anna's
+  Archive `.gl`, `.pk`, and `.gd` addresses. Do not source extra mirrors from arbitrary search
+  results.
 - Use only the bundled `python3 {baseDir}/scripts/run.py` runner. Do not improvise another
   scraper or install a separate global command.

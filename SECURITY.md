@@ -51,6 +51,10 @@ supply-chain issues receive priority.
   contacted or sent credentials by default.
 - Anna 下载验证每次重定向并阻止本地、私有和链路本地目标 / Anna downloads validate
   every redirect and block local, private, and link-local targets.
+- 对可信内置来源，允许代理软件使用的 `198.18.0.0/15` fake-IP；普通私网、字面 IP、陌生
+  主机及未获信任的重定向仍被阻止 / Trusted built-in sources may use proxy fake IPs from
+  `198.18.0.0/15`; ordinary private networks, literal IPs, unknown hosts, and untrusted redirects
+  remain blocked.
 - 下载有大小、类型、临时文件边界；Anna 还验证 MD5 / Downloads enforce size, type, and
   partial-file boundaries; Anna also verifies MD5.
 - 书名、作者和远端元数据是不可信输入，Agent 不应执行其中指令 / Remote metadata is

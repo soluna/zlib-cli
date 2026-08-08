@@ -17,6 +17,7 @@ PREVIOUS_ALLOW_INSECURE_HTTP_ENV = "ZLIB_ANNA_ALLOW_INSECURE_HTTP"
 LEGACY_ALLOW_PRIVATE_NETWORK_ENV = "ZLIB_CLI_ALLOW_PRIVATE_NETWORK"
 LEGACY_ALLOW_INSECURE_HTTP_ENV = "ZLIB_CLI_ALLOW_INSECURE_HTTP"
 REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
+PROXY_FAKE_IP_NETWORKS = (ipaddress.ip_network("198.18.0.0/15"),)
 
 
 class UnsafeUrlError(ValueError):
@@ -34,11 +35,21 @@ def _is_public_ip(value: str) -> bool:
     return address.is_global
 
 
+def _is_proxy_fake_ip(value: str) -> bool:
+    address = ipaddress.ip_address(value)
+    return any(address in network for network in PROXY_FAKE_IP_NETWORKS)
+
+
+def _normalized_hostnames(values: set[str] | None) -> set[str]:
+    return {value.rstrip(".").lower() for value in (values or set()) if value}
+
+
 def validate_http_url(
     url: str,
     *,
     require_https: bool = False,
     resolve_dns: bool = True,
+    trusted_proxy_hosts: set[str] | None = None,
 ) -> str:
     """Validate an HTTP(S) URL and reject local/private destinations by default."""
     if not isinstance(url, str) or not url.strip():
@@ -95,6 +106,13 @@ def validate_http_url(
         raise UnsafeUrlError(f"Hostname did not resolve to an address: {hostname}")
     blocked = sorted(address for address in resolved if not _is_public_ip(address))
     if blocked:
+        trusted_hosts = _normalized_hostnames(trusted_proxy_hosts)
+        if (
+            parsed.scheme.lower() == "https"
+            and hostname in trusted_hosts
+            and all(_is_proxy_fake_ip(address) for address in blocked)
+        ):
+            return value
         raise UnsafeUrlError(f"Hostname resolves to a private or non-routable address: {hostname}")
     return value
 
@@ -107,11 +125,12 @@ def safe_get(
     timeout: Any = 30,
     stream: bool = False,
     max_redirects: int = 5,
+    trusted_proxy_hosts: set[str] | None = None,
 ) -> requests.Response:
     """GET a URL while validating every redirect target."""
     current_url = url
     for _ in range(max_redirects + 1):
-        validate_http_url(current_url)
+        validate_http_url(current_url, trusted_proxy_hosts=trusted_proxy_hosts)
         response = session.get(
             current_url,
             headers=headers,

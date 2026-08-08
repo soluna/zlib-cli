@@ -23,19 +23,22 @@ Summarize which source is unavailable and what the user can do next. Do not dump
 
 ## Login Problems
 
-- `AUTH_REQUIRED`: continue with Anna's Archive unless the user explicitly wants Z-Library.
+- `AUTH_REQUIRED`: Z-Library search works anonymously. This error applies to a download or another
+  account-only feature; offer login only when the user wants that action.
 - `AUTH_INVALID`: explain that the saved login expired or is invalid. Offer `auth logout`, then
   a fresh terminal login.
 - Never request or echo the password in chat.
 
 ## Source Address Problems
 
-Z-Library domains can change. Ask the user for a domain they independently verified. Use
-`ZLIBRARY_DOMAIN` only with that value. Never take a domain from an arbitrary search result and
-send credentials to it.
+Z-Library domains can change. The runner merges domains from its pinned discovery endpoints and
+tries verified alternatives automatically. Only ask the user for a manual domain after that pool
+is exhausted. Use `ZLIBRARY_DOMAIN` only with a value they independently verified; never take a
+domain from an arbitrary search result and send credentials to it.
 
-For Anna's Archive, suggest a user-verified `ANNAS_BASE_URL`, `HTTPS_PROXY`, or `ALL_PROXY` when
-the normal address is blocked.
+For Anna's Archive, the runner automatically tries the official `.gl`, `.pk`, and `.gd` origins.
+Suggest a user-verified `ANNAS_BASE_URL`, `HTTPS_PROXY`, or `ALL_PROXY` only when all official
+origins fail.
 
 Unknown Z-Library domains require the user's explicit approval before
 `ZLIBRARY_ALLOW_UNTRUSTED_DOMAIN=1`. Private-network and insecure-HTTP overrides also require

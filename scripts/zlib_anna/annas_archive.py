@@ -39,7 +39,12 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-BASE_URL = "https://annas-archive.gl"
+OFFICIAL_BASE_URLS = (
+    "https://annas-archive.gl",
+    "https://annas-archive.pk",
+    "https://annas-archive.gd",
+)
+BASE_URL = OFFICIAL_BASE_URLS[0]
 
 # CSS 选择器降级链：从最精确到最宽泛
 # Anna's Archive 改版时按优先级依次尝试，任一命中即停止
@@ -56,6 +61,10 @@ RETRY_MAX = 3
 RETRY_BACKOFF = 2  # seconds, exponential
 MD5_PATTERN = re.compile(r"^[0-9a-f]{32}$", re.I)
 LIBGEN_HOSTS = {"libgen.li", "libgen.is", "libgen.rs"}
+TRUSTED_PROXY_HOSTS = {
+    *(urlparse(base_url).hostname for base_url in OFFICIAL_BASE_URLS),
+    *LIBGEN_HOSTS,
+}
 
 
 def _normalize_ext_filter(ext_filter) -> set[str]:
@@ -95,7 +104,12 @@ def _http_get_with_retry(
     last_exc = None
     for attempt in range(1, RETRY_MAX + 1):
         try:
-            resp = safe_get(session, url, timeout=timeout)
+            resp = safe_get(
+                session,
+                url,
+                timeout=timeout,
+                trusted_proxy_hosts=TRUSTED_PROXY_HOSTS,
+            )
             # 4xx: client error, don't retry
             if 400 <= resp.status_code < 500:
                 resp.raise_for_status()

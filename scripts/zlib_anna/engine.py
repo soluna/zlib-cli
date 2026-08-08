@@ -124,9 +124,31 @@ HTML_CONTENT_TYPES = {
 
 
 def anna_base_url() -> str | None:
+    candidates = anna_base_urls()
+    return candidates[0] if candidates else None
+
+
+def anna_base_urls() -> list[str]:
     if not ANNAS_AVAILABLE:
-        return None
-    return os.environ.get("ANNAS_BASE_URL") or getattr(annas_archive, "BASE_URL", None)
+        return []
+    configured = os.environ.get("ANNAS_BASE_URL")
+    official = getattr(
+        annas_archive,
+        "OFFICIAL_BASE_URLS",
+        (getattr(annas_archive, "BASE_URL", None),),
+    )
+    candidates = [configured, *official]
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in candidates:
+        if not item:
+            continue
+        value = str(item).rstrip("/")
+        if value in seen:
+            continue
+        seen.add(value)
+        unique.append(value)
+    return unique
 
 
 def anna_base_origin() -> str | None:
@@ -360,6 +382,7 @@ def config_status() -> dict[str, Any]:
         },
         "anna": {
             "base_origin": anna_base_origin(),
+            "candidate_origins": [url_origin(item) for item in anna_base_urls()],
         },
     }
     if permission_repairs:
@@ -376,20 +399,26 @@ def safe_json_response(resp: requests.Response) -> dict[str, Any] | None:
 
 
 def fetch_domains() -> list[str]:
+    domains: list[str] = []
+    seen: set[str] = set()
     for url in ENTRY_POINTS:
         try:
             resp = requests.get(url, headers=HEADERS, timeout=15, allow_redirects=False)
             data = safe_json_response(resp)
             if resp.status_code == 200 and data and data.get("success"):
-                domains = []
                 for item in data.get("domains", []):
                     domain = normalize_domain(item.get("domain"))
-                    if domain and item.get("contentAvailable") and not item.get("isRedirector"):
+                    if (
+                        domain
+                        and domain not in seen
+                        and item.get("contentAvailable")
+                        and not item.get("isRedirector")
+                    ):
+                        seen.add(domain)
                         domains.append(domain)
-                return domains
         except requests.RequestException:
             continue
-    return []
+    return domains
 
 
 def normalize_domain(domain: str | None) -> str | None:
@@ -421,10 +450,14 @@ def env_zlib_domain() -> str | None:
     return None
 
 
-def test_domain(domain: str) -> bool:
+def test_domain(domain: str, *, trusted: bool = False) -> bool:
     domain = normalize_domain(domain) or domain
     try:
-        validate_http_url(f"https://{domain}", require_https=True)
+        validate_http_url(
+            f"https://{domain}",
+            require_https=True,
+            trusted_proxy_hosts={domain} if trusted else None,
+        )
         resp = requests.get(
             f"https://{domain}/eapi/info/domains",
             headers=HEADERS,
@@ -441,6 +474,8 @@ def find_working_domain(
     preferred: str | None = None,
     *,
     preferred_trusted: bool = False,
+    excluded: set[str] | None = None,
+    discovery_cache: dict[str, list[str]] | None = None,
 ) -> tuple[str | None, list[dict[str, Any]]]:
     checks: list[dict[str, Any]] = []
     env_domain = env_zlib_domain()
@@ -465,7 +500,9 @@ def find_working_domain(
         (preferred, "config", preferred_trust_basis),
     ]
     deferred: list[tuple[str, str]] = []
-    seen: set[str] = set()
+    seen: set[str] = {
+        domain for item in (excluded or set()) if (domain := normalize_domain(item)) is not None
+    }
     for domain, source, trust_basis in early_candidates:
         if not domain or domain in seen:
             continue
@@ -473,7 +510,11 @@ def find_working_domain(
         if not trust_basis:
             deferred.append((domain, source))
             continue
-        ok = test_domain(domain)
+        ok = (
+            test_domain(domain)
+            if trust_basis == "explicit_opt_in"
+            else test_domain(domain, trusted=True)
+        )
         checks.append(
             {
                 "domain": domain,
@@ -486,7 +527,12 @@ def find_working_domain(
         if ok:
             return domain, checks
 
-    discovered_domains = fetch_domains()
+    if discovery_cache is not None and "domains" in discovery_cache:
+        discovered_domains = discovery_cache["domains"]
+    else:
+        discovered_domains = fetch_domains()
+        if discovery_cache is not None:
+            discovery_cache["domains"] = discovered_domains
     discovered_set = set(discovered_domains)
     for domain, source in deferred:
         if domain not in discovered_set:
@@ -500,7 +546,7 @@ def find_working_domain(
                 }
             )
             continue
-        ok = test_domain(domain)
+        ok = test_domain(domain, trusted=True)
         checks.append(
             {
                 "domain": domain,
@@ -522,7 +568,7 @@ def find_working_domain(
             if not domain or domain in seen:
                 continue
             seen.add(domain)
-            ok = test_domain(domain)
+            ok = test_domain(domain, trusted=True)
             checks.append(
                 {
                     "domain": domain,
@@ -638,7 +684,11 @@ def build_search_kwargs(args: argparse.Namespace) -> dict[str, Any]:
     return kwargs
 
 
-def normalize_zlib_book(book: dict[str, Any]) -> dict[str, Any]:
+def normalize_zlib_book(
+    book: dict[str, Any],
+    *,
+    authenticated: bool = True,
+) -> dict[str, Any]:
     book_id = str(book.get("id", ""))
     hash_id = str(book.get("hash", ""))
     valid_ref = bool(
@@ -655,8 +705,13 @@ def normalize_zlib_book(book: dict[str, Any]) -> dict[str, Any]:
         "language": book.get("language"),
         "extension": book.get("extension"),
         "size": book.get("filesizeString") or book.get("filesize"),
-        "can_download": valid_ref,
-        "requires_account": True,
+        "edition": book.get("edition"),
+        "publisher": book.get("publisher"),
+        "identifier": book.get("identifier"),
+        "pages": book.get("pages"),
+        "can_download": valid_ref and authenticated,
+        "can_attempt_download": valid_ref and authenticated,
+        "requires_account": not authenticated,
     }
 
 
@@ -688,27 +743,43 @@ def search_zlib(
     args: argparse.Namespace,
     cfg: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], SourceStatus]:
-    if not has_zlib_auth(cfg):
-        status = SourceStatus(
-            source="zlib",
-            available=False,
-            authenticated=False,
-            can_search=False,
-            can_download=False,
-            can_attempt_download=False,
-            status="auth_required",
-            message="Z-Library token is not configured.",
-        )
-        if args.source == "zlib":
-            fail(
-                "AUTH_REQUIRED",
-                "Z-Library search requires login.",
-                suggestions=[f"Run: {RUNNER_COMMAND} auth login zlib --email <you@example.com>"],
-            )
-        return [], status
+    excluded: set[str] = set()
+    failed_domains: list[str] = []
+    z = None
+    result: dict[str, Any] | None = None
+    checks: list[dict[str, Any]] = []
+    discovery_cache: dict[str, list[str]] = {}
 
-    z = init_zlibrary(cfg, require_auth=True)
-    result = z.search(**build_search_kwargs(args))
+    while True:
+        working, checks = find_working_domain(
+            cfg.get("domain"),
+            preferred_trusted=bool(cfg.get("domain_trusted")),
+            excluded=excluded,
+            discovery_cache=discovery_cache,
+        )
+        if not working:
+            fail(
+                "SOURCE_UNAVAILABLE",
+                "No reachable Z-Library mirror could complete the search.",
+                suggestions=[
+                    f"Run: {RUNNER_COMMAND} doctor --json",
+                    "Configure HTTPS_PROXY or ALL_PROXY if your network blocks access.",
+                ],
+                details={"failed_domains": failed_domains, "domain_checks": checks},
+            )
+        try:
+            z = init_zlibrary(
+                cfg,
+                require_auth=False,
+                update_config=False,
+                resolved_domain=working,
+            )
+            result = z.search(**build_search_kwargs(args))
+            break
+        except (requests.RequestException, ValueError):
+            excluded.add(working)
+            failed_domains.append(working)
+
     if not result or not result.get("success"):
         fail(
             "SEARCH_FAILED",
@@ -716,16 +787,30 @@ def search_zlib(
             details={"response_received": bool(result)},
         )
 
-    books = [normalize_zlib_book(book) for book in result.get("books", [])]
+    authenticated = bool(z and z.isLoggedIn())
+    if checks and z is not None:
+        working = z.getDomain()
+        cfg["domain"] = working
+        cfg["domain_source"] = domain_source(working, checks)
+        cfg["domain_trusted"] = domain_trust_is_persistent(working, checks)
+        save_config(cfg)
+
+    books = [
+        normalize_zlib_book(book, authenticated=authenticated) for book in result.get("books", [])
+    ]
     return books, SourceStatus(
         source="zlib",
         available=True,
-        authenticated=True,
+        authenticated=authenticated,
         can_search=True,
-        can_download=True,
-        can_attempt_download=True,
+        can_download=authenticated,
+        can_attempt_download=authenticated,
         status="ok",
-        details={"domain": z.getDomain()},
+        details={
+            "domain": z.getDomain(),
+            "search_mode": "authenticated" if authenticated else "anonymous",
+            "failed_domains": failed_domains,
+        },
     )
 
 
@@ -745,15 +830,27 @@ def search_anna(args: argparse.Namespace) -> tuple[list[dict[str, Any]], SourceS
             fail("MODULE_MISSING", "Anna's Archive module is unavailable.")
         return [], status
 
-    try:
-        client = annas_archive.AnnasArchiveClient()
-        results = client.search(
-            args.query,
-            limit=args.limit,
-            page=args.page,
-            ext_filter=parse_csv(args.ext),
-        )
-    except Exception as exc:
+    results = None
+    selected_base_url = None
+    failures: list[dict[str, str]] = []
+    last_exc: Exception | None = None
+    for base_url in anna_base_urls():
+        try:
+            client = annas_archive.AnnasArchiveClient(base_url=base_url)
+            results = client.search(
+                args.query,
+                limit=args.limit,
+                page=args.page,
+                ext_filter=parse_csv(args.ext),
+            )
+            selected_base_url = base_url
+            break
+        except Exception as exc:
+            last_exc = exc
+            failures.append({"origin": url_origin(base_url), "error_type": type(exc).__name__})
+
+    if results is None:
+        exc = last_exc or RuntimeError("No Anna's Archive base URL is configured")
         status = SourceStatus(
             source="anna",
             available=False,
@@ -763,7 +860,11 @@ def search_anna(args: argparse.Namespace) -> tuple[list[dict[str, Any]], SourceS
             can_attempt_download=False,
             status="unavailable",
             message="Anna's Archive request failed.",
-            details={"base_origin": anna_base_origin(), "error_type": type(exc).__name__},
+            details={
+                "base_origin": anna_base_origin(),
+                "error_type": type(exc).__name__,
+                "failed_origins": [item["origin"] for item in failures],
+            },
         )
         if args.source == "anna":
             fail(
@@ -804,8 +905,9 @@ def search_anna(args: argparse.Namespace) -> tuple[list[dict[str, Any]], SourceS
         filtered_books.append(book)
 
     details: dict[str, Any] = {
-        "base_origin": anna_base_origin(),
+        "base_origin": url_origin(selected_base_url or anna_base_url() or ""),
         "mode": "html_best_effort",
+        "failed_origins": [item["origin"] for item in failures],
     }
     if getattr(args, "order", None):
         details["ignored_filters"] = ["order"]
@@ -909,9 +1011,8 @@ def cmd_search(args: argparse.Namespace) -> dict[str, Any]:
             "No requested source is available.",
             suggestions=[
                 f"Run: {RUNNER_COMMAND} doctor --json",
-                f"Login to Z-Library with: {RUNNER_COMMAND} auth login zlib "
-                "--email <you@example.com>",
-                "Set ANNAS_BASE_URL if Anna's Archive is blocked.",
+                "The Skill will automatically try the known Z-Library and Anna's Archive mirrors.",
+                "Configure HTTPS_PROXY or ALL_PROXY if your network blocks all known mirrors.",
             ],
             details={"sources": [status.to_dict() for status in statuses]},
         )
@@ -1106,8 +1207,16 @@ def download_zlib(args: argparse.Namespace, book_id: str, hash_id: str | None) -
 def anna_links(md5: str) -> dict[str, Any]:
     if not ANNAS_AVAILABLE:
         fail("MODULE_MISSING", "Anna's Archive module is unavailable.")
-    client = annas_archive.AnnasArchiveClient()
-    return client.get_download_links(md5)
+    last_exc: Exception | None = None
+    for base_url in anna_base_urls():
+        try:
+            client = annas_archive.AnnasArchiveClient(base_url=base_url)
+            return client.get_download_links(md5)
+        except Exception as exc:
+            last_exc = exc
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("No Anna's Archive base URL is configured")
 
 
 def content_type(response: requests.Response) -> str:
@@ -1291,6 +1400,7 @@ def resolve_anna_file_response(
                 headers=HEADERS,
                 timeout=DIRECT_DOWNLOAD_TIMEOUT,
                 stream=True,
+                trusted_proxy_hosts=set(getattr(annas_archive, "TRUSTED_PROXY_HOSTS", set())),
             )
             response.raise_for_status()
         except requests.RequestException:
@@ -1532,7 +1642,9 @@ def cmd_info(args: argparse.Namespace) -> dict[str, Any]:
 def cmd_domains(args: argparse.Namespace) -> dict[str, Any]:
     discovered = fetch_domains()
     domains = discovered or FALLBACK_ZLIB_DOMAINS
-    checks = [{"domain": domain, "available": test_domain(domain)} for domain in domains]
+    checks = [
+        {"domain": domain, "available": test_domain(domain, trusted=True)} for domain in domains
+    ]
     payload = ok_payload(
         domains=checks,
         count=len(checks),
@@ -1669,8 +1781,8 @@ def check_anna() -> SourceStatus:
             status="module_missing",
             message="annas_archive.py could not be imported.",
         )
-    base_url = anna_base_url()
-    if not base_url:
+    base_urls = anna_base_urls()
+    if not base_urls:
         return SourceStatus(
             "anna",
             available=False,
@@ -1681,48 +1793,65 @@ def check_anna() -> SourceStatus:
             status="module_missing",
             message="Anna's Archive base URL is unavailable.",
         )
-    try:
-        validate_http_url(
-            base_url,
-            require_https=not env_flag(
-                ALLOW_INSECURE_HTTP_ENV,
-                PREVIOUS_ALLOW_INSECURE_HTTP_ENV,
-                LEGACY_ALLOW_INSECURE_HTTP_ENV,
-            ),
-        )
-        resp = requests.get(
-            base_url,
-            headers=HEADERS,
-            timeout=15,
-            allow_redirects=False,
-        )
-        available = 200 <= resp.status_code < 300
-        return SourceStatus(
-            "anna",
-            available=available,
-            authenticated=False,
-            can_search=available,
-            can_download=False,
-            can_attempt_download=available,
-            status="ok" if available else "unavailable",
-            details={
-                "base_origin": url_origin(base_url),
-                "status_code": resp.status_code,
-                "mode": "html_best_effort",
-            },
-        )
-    except (requests.RequestException, UnsafeUrlError) as exc:
-        return SourceStatus(
-            "anna",
-            available=False,
-            authenticated=False,
-            can_search=False,
-            can_download=False,
-            can_attempt_download=False,
-            status="unavailable",
-            message="Anna's Archive health check failed.",
-            details={"base_origin": url_origin(base_url), "error_type": type(exc).__name__},
-        )
+    failures: list[dict[str, str]] = []
+    trusted_hosts = set(getattr(annas_archive, "TRUSTED_PROXY_HOSTS", set()))
+    for base_url in base_urls:
+        try:
+            validate_http_url(
+                base_url,
+                require_https=not env_flag(
+                    ALLOW_INSECURE_HTTP_ENV,
+                    PREVIOUS_ALLOW_INSECURE_HTTP_ENV,
+                    LEGACY_ALLOW_INSECURE_HTTP_ENV,
+                ),
+                trusted_proxy_hosts=trusted_hosts,
+            )
+            resp = requests.get(
+                base_url,
+                headers=HEADERS,
+                timeout=15,
+                allow_redirects=False,
+            )
+            available = 200 <= resp.status_code < 300
+            if available:
+                return SourceStatus(
+                    "anna",
+                    available=True,
+                    authenticated=False,
+                    can_search=True,
+                    can_download=False,
+                    can_attempt_download=True,
+                    status="ok",
+                    details={
+                        "base_origin": url_origin(base_url),
+                        "candidate_origins": [url_origin(item) for item in base_urls],
+                        "status_code": resp.status_code,
+                        "mode": "html_best_effort",
+                        "failed_origins": [item["origin"] for item in failures],
+                    },
+                )
+            failures.append(
+                {"origin": url_origin(base_url), "error_type": f"HTTP_{resp.status_code}"}
+            )
+        except (requests.RequestException, UnsafeUrlError) as exc:
+            failures.append({"origin": url_origin(base_url), "error_type": type(exc).__name__})
+
+    return SourceStatus(
+        "anna",
+        available=False,
+        authenticated=False,
+        can_search=False,
+        can_download=False,
+        can_attempt_download=False,
+        status="unavailable",
+        message="Anna's Archive health check failed.",
+        details={
+            "base_origin": url_origin(base_urls[0]),
+            "candidate_origins": [url_origin(item) for item in base_urls],
+            "error_type": failures[-1]["error_type"] if failures else "RuntimeError",
+            "failed_origins": [item["origin"] for item in failures],
+        },
+    )
 
 
 def check_zlib(cfg: dict[str, Any]) -> SourceStatus:
@@ -1757,12 +1886,18 @@ def check_zlib(cfg: dict[str, Any]) -> SourceStatus:
         "zlib",
         available=True,
         authenticated=authenticated,
-        can_search=authenticated,
+        can_search=True,
         can_download=authenticated,
         can_attempt_download=authenticated,
-        status="ok" if authenticated else "auth_required",
-        message="" if authenticated else "Z-Library is reachable but login is required.",
-        details={"domain": working, "domain_checks": checks},
+        status="ok",
+        message=(
+            "" if authenticated else "Anonymous search is available; downloads require login."
+        ),
+        details={
+            "domain": working,
+            "domain_checks": checks,
+            "search_mode": "authenticated" if authenticated else "anonymous",
+        },
     )
 
 
