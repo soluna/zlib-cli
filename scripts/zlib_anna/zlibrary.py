@@ -332,6 +332,7 @@ class Zlibrary:
                 }.items()
                 if v is not None
             },
+            override=True,
         )
 
     def __getImageData(self, url: str) -> requests.Response.content:

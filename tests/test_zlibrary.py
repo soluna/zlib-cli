@@ -108,3 +108,18 @@ def test_streaming_download_rejects_declared_oversize_before_writing(tmp_path):
             )
 
     assert not output.exists()
+
+
+def test_search_is_available_without_login():
+    z = Zlibrary()
+    response = MagicMock()
+    response.is_redirect = False
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {"success": 1, "books": [{"id": "123", "title": "Book"}]}
+
+    with patch.object(z._Zlibrary__session, "post", return_value=response) as mock_post:
+        result = z.search(message="python", limit=5)
+
+    assert result["success"] == 1
+    assert result["books"][0]["title"] == "Book"
+    mock_post.assert_called_once()

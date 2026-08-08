@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>zlib-skill 用户体验审计与修复复核｜2026-08-07</title>
+  <style>
+    :root {
+      --ink: #1f2724;
+      --ink-soft: #56605c;
+      --paper: #f5f1e8;
+      --surface: #fffdf8;
+      --surface-strong: #ffffff;
+      --line: #d9d2c4;
+      --green: #2f6753;
+      --green-soft: #dce9e1;
+      --red: #a33f35;
+      --red-soft: #f5ded9;
+      --amber: #9a661d;
+      --amber-soft: #f4e7cc;
+      --blue: #335f78;
+      --blue-soft: #dce8ef;
+      --shadow: 0 14px 40px rgba(37, 45, 40, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 78% -10%, rgba(63, 111, 90, 0.14), transparent 33rem),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    a { color: var(--green); text-underline-offset: 3px; }
+
+    img { max-width: 100%; }
+
+    code, pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .toc {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 32px 24px;
+      border-right: 1px solid var(--line);
+      background: rgba(245, 241, 232, 0.9);
+      backdrop-filter: blur(16px);
+    }
+
+    .toc-brand {
+      margin: 0 0 6px;
+      font-size: 18px;
+      font-weight: 760;
+      letter-spacing: -0.02em;
+    }
+
+    .toc-meta {
+      margin: 0 0 28px;
+      color: var(--ink-soft);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .toc nav { display: grid; gap: 4px; }
+
+    .toc nav a {
+      display: block;
+      padding: 8px 10px;
+      border-radius: 9px;
+      color: var(--ink-soft);
+      font-size: 14px;
+      text-decoration: none;
+    }
+
+    .toc nav a:hover {
+      color: var(--green);
+      background: var(--green-soft);
+    }
+
+    .toc-note {
+      position: absolute;
+      right: 24px;
+      bottom: 28px;
+      left: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--ink-soft);
+      font-size: 12px;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 58px 0 96px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 48px;
+      border: 1px solid rgba(47, 103, 83, 0.2);
+      border-radius: 26px;
+      color: #f8fbf8;
+      background: #254c3d;
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      position: absolute;
+      right: -4rem;
+      bottom: -7rem;
+      width: 22rem;
+      height: 22rem;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 50%;
+      content: "";
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: #c9dfd3;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      max-width: 1100px;
+      margin-bottom: 18px;
+      font-size: clamp(40px, 5.2vw, 64px);
+      line-height: 1.03;
+      letter-spacing: -0.055em;
+    }
+
+    .hero .lead {
+      max-width: 790px;
+      margin-bottom: 34px;
+      color: #dce9e1;
+      font-size: 20px;
+      line-height: 1.55;
+    }
+
+    .hero-metrics {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      min-height: 114px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .metric strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .metric span { color: #c9dfd3; font-size: 13px; }
+
+    section { padding-top: 74px; scroll-margin-top: 24px; }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-kicker {
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 760;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      margin-bottom: 8px;
+      font-size: clamp(28px, 4vw, 43px);
+      line-height: 1.15;
+      letter-spacing: -0.035em;
+    }
+
+    h3 {
+      margin-bottom: 8px;
+      font-size: 20px;
+      line-height: 1.35;
+      letter-spacing: -0.015em;
+    }
+
+    .section-desc { max-width: 760px; margin: 0; color: var(--ink-soft); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .panel {
+      padding: 26px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 5px 18px rgba(37, 45, 40, 0.035);
+    }
+
+    .panel p:last-child, .panel ul:last-child { margin-bottom: 0; }
+
+    .panel ul { margin: 12px 0 0; padding-left: 20px; }
+
+    .panel li + li { margin-top: 7px; }
+
+    .verdict {
+      border-color: rgba(47, 103, 83, 0.32);
+      background: linear-gradient(145deg, #fffdf8, #edf5ef);
+    }
+
+    .risk-panel {
+      border-color: rgba(163, 63, 53, 0.28);
+      background: linear-gradient(145deg, #fffdf8, #fbebe7);
+    }
+
+    .quote {
+      margin: 18px 0 0;
+      padding-left: 18px;
+      border-left: 3px solid var(--green);
+      color: var(--ink-soft);
+      font-size: 18px;
+    }
+
+    .method-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .method-item {
+      min-height: 148px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 253, 248, 0.72);
+    }
+
+    .method-item .num {
+      display: block;
+      margin-bottom: 22px;
+      color: var(--green);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .method-item strong { display: block; margin-bottom: 5px; }
+
+    .method-item p { margin: 0; color: var(--ink-soft); font-size: 13px; }
+
+    .journey-wrap {
+      overflow-x: auto;
+      padding: 4px 0 16px;
+    }
+
+    .journey {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(225px, 1fr));
+      gap: 12px;
+      min-width: 1660px;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 430px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+    }
+
+    .stage-index {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .health {
+      display: inline-flex;
+      align-items: center;
+      min-height: 27px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.03em;
+    }
+
+    .good { color: var(--green); background: var(--green-soft); }
+    .watch { color: var(--amber); background: var(--amber-soft); }
+    .bad { color: var(--red); background: var(--red-soft); }
+    .unknown { color: var(--blue); background: var(--blue-soft); }
+
+    .stage h3 { min-height: 54px; }
+
+    .stage dl { margin: 20px 0 0; }
+
+    .stage dt {
+      margin-top: 14px;
+      color: var(--ink-soft);
+      font-size: 11px;
+      font-weight: 760;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .stage dd { margin: 4px 0 0; font-size: 14px; }
+
+    .emotion {
+      position: absolute;
+      right: 20px;
+      bottom: 18px;
+      left: 20px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--line);
+      color: var(--ink-soft);
+      font-size: 13px;
+    }
+
+    .evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    figure {
+      margin: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-strong);
+      box-shadow: var(--shadow);
+    }
+
+    figure img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      object-position: top;
+      border-bottom: 1px solid var(--line);
+      background: white;
+    }
+
+    figcaption { padding: 20px 22px 22px; }
+
+    figcaption strong { display: block; margin-bottom: 6px; }
+
+    figcaption p { margin: 0; color: var(--ink-soft); font-size: 14px; }
+
+    .run-data {
+      margin-top: 20px;
+      padding: 26px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #202825;
+      color: #ecf1ee;
+    }
+
+    .run-data h3 { color: white; }
+
+    .run-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 18px;
+      font-size: 14px;
+    }
+
+    .run-table th, .run-table td {
+      padding: 13px 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .run-table th { color: #b9cec4; font-weight: 650; }
+
+    .run-table code { color: #d9eadf; font-size: 12px; }
+
+    .issue-list { display: grid; gap: 14px; }
+
+    .issue {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr) 220px;
+      gap: 22px;
+      align-items: start;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+    }
+
+    .priority {
+      display: inline-flex;
+      justify-content: center;
+      width: 70px;
+      padding: 7px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .p0 { color: #fff; background: var(--red); }
+    .p1 { color: var(--red); background: var(--red-soft); }
+    .p2 { color: var(--amber); background: var(--amber-soft); }
+
+    .issue p { margin-bottom: 0; color: var(--ink-soft); }
+
+    .issue-meta {
+      display: grid;
+      gap: 8px;
+      padding-left: 20px;
+      border-left: 1px solid var(--line);
+      color: var(--ink-soft);
+      font-size: 12px;
+    }
+
+    .issue-meta strong { color: var(--ink); }
+
+    .callout {
+      margin-top: 20px;
+      padding: 20px 22px;
+      border-left: 4px solid var(--blue);
+      border-radius: 0 12px 12px 0;
+      background: var(--blue-soft);
+      color: #294d61;
+    }
+
+    .callout p:last-child { margin-bottom: 0; }
+
+    .access-grid {
+      display: grid;
+      grid-template-columns: 0.8fr 1.2fr;
+      gap: 18px;
+    }
+
+    .roadmap {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .roadmap-col {
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+    }
+
+    .roadmap-col .timing {
+      display: block;
+      margin-bottom: 16px;
+      color: var(--green);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .roadmap-col ol { margin: 16px 0 0; padding-left: 21px; }
+
+    .roadmap-col li + li { margin-top: 12px; }
+
+    .acceptance {
+      width: 100%;
+      margin-top: 28px;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      font-size: 14px;
+    }
+
+    .acceptance th, .acceptance td {
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .acceptance th { color: var(--green); background: var(--green-soft); }
+
+    .research-plan {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+    }
+
+    .metric-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .metric-chip {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+      font-size: 13px;
+    }
+
+    pre {
+      overflow-x: auto;
+      margin: 16px 0 0;
+      padding: 18px;
+      border-radius: 12px;
+      color: #e9f0ec;
+      background: #202825;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .limits {
+      padding: 26px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .limits ul { margin-bottom: 0; padding-left: 20px; }
+
+    .footer {
+      margin-top: 70px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--ink-soft);
+      font-size: 13px;
+    }
+
+    @media (max-width: 980px) {
+      .layout { display: block; }
+      .toc { display: none; }
+      main { width: min(100% - 32px, 920px); padding-top: 22px; }
+      .hero { padding: 34px 28px; }
+      .hero-metrics, .method-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .issue { grid-template-columns: 92px minmax(0, 1fr); }
+      .issue-meta { grid-column: 2; padding: 12px 0 0; border-top: 1px solid var(--line); border-left: 0; }
+      .roadmap { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 700px) {
+      body { font-size: 15px; }
+      h1 { font-size: 44px; }
+      .hero .lead { font-size: 17px; }
+      .hero-metrics, .grid-2, .evidence-grid, .access-grid, .research-plan,
+      .metric-list, .method-grid { grid-template-columns: 1fr; }
+      .section-head { grid-template-columns: 1fr; gap: 6px; }
+      .issue { grid-template-columns: 1fr; }
+      .issue-meta { grid-column: 1; }
+      .run-table, .acceptance { display: block; overflow-x: auto; }
+    }
+
+    @media print {
+      body { background: white; color: black; }
+      .layout { display: block; }
+      .toc { display: none; }
+      main { width: 100%; padding: 0; }
+      .hero, .panel, .stage, figure, .issue, .roadmap-col, .limits { box-shadow: none; }
+      .hero { color: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      section { break-inside: avoid; padding-top: 36px; }
+      .journey-wrap { overflow: visible; }
+      .journey { grid-template-columns: repeat(2, 1fr); min-width: 0; }
+      .stage { min-height: 0; break-inside: avoid; }
+      .emotion { position: static; margin-top: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="toc" aria-label="文档目录">
+      <p class="toc-brand">zlib-skill UX Audit</p>
+      <p class="toc-meta">体验审计 · 修复复核版</p>
+      <nav>
+        <a href="#summary">结论摘要</a>
+        <a href="#scope">范围与方法</a>
+        <a href="#journey">体验地图</a>
+        <a href="#evidence">证据</a>
+        <a href="#issues">问题清单</a>
+        <a href="#accessibility">可访问性</a>
+        <a href="#roadmap">改进路线</a>
+        <a href="#research">研究建议</a>
+        <a href="#limits">证据边界</a>
+      </nav>
+      <p class="toc-note">初审：2026-08-06<br>复核：2026-08-07<br>环境：macOS / Python 3.14 / 无账号 / 无下载</p>
+    </aside>
+
+    <main>
+      <header class="hero">
+        <p class="eyebrow">Evidence-based experience audit</p>
+        <h1>核心搜索断层已修复，恢复体验仍待收口。</h1>
+        <p class="lead">无账号 Z-Library 搜索、双来源地址轮换和代理 fake-IP 兼容已经落地并通过真实复核；首次准备反馈、诊断语义和面向普通用户的恢复文案仍是下一批重点。</p>
+        <div class="hero-metrics" aria-label="审计摘要">
+          <div class="metric"><strong>7</strong><span>个端到端旅程阶段</span></div>
+          <div class="metric"><strong>0</strong><span>个复核环境中的核心阻塞</span></div>
+          <div class="metric"><strong>4</strong><span>个高优先级体验问题</span></div>
+          <div class="metric"><strong>9.34s</strong><span>干净环境首次打开帮助</span></div>
+        </div>
+      </header>
+
+      <section id="summary">
+        <div class="section-head">
+          <div class="section-kicker">01 · Verdict</div>
+          <div>
+            <h2>结论摘要</h2>
+            <p class="section-desc">复核后的整体体验健康度：<strong>可用但仍有风险</strong>。核心无账号搜索已恢复，剩余问题主要集中在等待反馈、诊断语义和故障恢复。</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <article class="panel verdict">
+            <h3>已经做对的事</h3>
+            <ul>
+              <li>用户可以直接说书名、作者、语言和格式，不必理解来源站点。</li>
+              <li>搜索与下载明确分开，避免“搜到即下载”的越权与误操作。</li>
+              <li>“找到、已尝试、已下载”被区分，成功状态可信。</li>
+              <li>登录密码留在本机终端，文档持续提醒不要泄露凭据。</li>
+              <li>README 先讲用户目标，再放安装细节，信息顺序合理。</li>
+            </ul>
+          </article>
+          <article class="panel risk-panel">
+            <h3>体验断层</h3>
+            <ul>
+              <li>干净环境首次运行只有一句准备提示，等待期间没有阶段、进度或预计时长。</li>
+              <li>首次准备与多镜像重试仍可能让用户等待较久，缺少阶段反馈和预计时长。</li>
+              <li>失败建议暴露 <code>{baseDir}</code>、<code>--json</code>、代理环境变量等内部概念。</li>
+              <li><code>doctor</code> 在所有来源不可用时仍返回顶层 <code>ok: true</code>，容易误导 Agent。</li>
+              <li>Z-Library 已补充标识符、出版社、版次和页数，但 Anna 候选仍缺少这些身份信息。</li>
+            </ul>
+          </article>
+        </div>
+        <p class="quote"><strong>修复复核（2026-08-07）：</strong>隔离配置、无账号、未开启私网放行时，doctor 显示两来源均可搜索；联合搜索得到 6 条候选。Z-Library 前两个域名在实际搜索阶段失败后自动切到第三个域名，证明后备链不只停留在健康检查。</p>
+      </section>
+
+      <section id="scope">
+        <div class="section-head">
+          <div class="section-kicker">02 · Method</div>
+          <div>
+            <h2>范围与方法</h2>
+            <p class="section-desc">采用端到端体验地图、启发式审计、可访问性风险检查和真实命令走查。评估对象包括仓库入口、安装文档、Skill 指令、执行器输出和支持路径。</p>
+          </div>
+        </div>
+        <div class="method-grid">
+          <article class="method-item"><span class="num">01</span><strong>用户目标</strong><p>从“我想找一本书”走到“正确文件已保存且我知道在哪里”。</p></article>
+          <article class="method-item"><span class="num">02</span><strong>关键情境</strong><p>首次安装、无账号、信息不完整、多个版本、来源不可用、下载失败。</p></article>
+          <article class="method-item"><span class="num">03</span><strong>证据</strong><p>本次打开的 3 个文档页面、隔离配置下的 6 组命令输出和实现代码。</p></article>
+          <article class="method-item"><span class="num">04</span><strong>评价维度</strong><p>可发现性、清晰度、等待感、信任、错误恢复、选择质量、可访问性。</p></article>
+        </div>
+      </section>
+
+      <section id="journey">
+        <div class="section-head">
+          <div class="section-kicker">03 · Journey map</div>
+          <div>
+            <h2>用户体验地图</h2>
+            <p class="section-desc">横向阅读完整旅程。健康度描述的是本次审计环境，不代表所有网络、账号或 Agent 的普遍结果。</p>
+          </div>
+        </div>
+        <div class="journey-wrap" tabindex="0" aria-label="可横向滚动的七阶段体验地图">
+          <div class="journey">
+            <article class="stage">
+              <div class="stage-index"><span>STEP 01</span><span class="health good">健康</span></div>
+              <h3>理解与发现</h3>
+              <dl>
+                <dt>用户目标</dt><dd>快速判断它能否帮我找到对的书。</dd>
+                <dt>触点</dt><dd>GitHub README、Agent Skill 名称与简介。</dd>
+                <dt>实测</dt><dd>价值主张直接；先讲自然语言使用与选择原则。</dd>
+                <dt>机会</dt><dd>增加“首次使用会准备本地运行环境”的轻量预期。</dd>
+              </dl>
+              <div class="emotion">情绪：好奇 → 有信心</div>
+            </article>
+
+            <article class="stage">
+              <div class="stage-index"><span>STEP 02</span><span class="health watch">有风险</span></div>
+              <h3>安装与验证</h3>
+              <dl>
+                <dt>用户目标</dt><dd>一句话完成安装，不碰账号和下载。</dd>
+                <dt>触点</dt><dd>README 快速安装、INSTALL.md。</dd>
+                <dt>实测</dt><dd>推荐路径短，但回退文档较长且中英逐段重复。</dd>
+                <dt>机会</dt><dd>将自动安装、手动安装、迁移分成三个明确入口。</dd>
+              </dl>
+              <div class="emotion">情绪：有信心 → 略显谨慎</div>
+            </article>
+
+            <article class="stage">
+              <div class="stage-index"><span>STEP 03</span><span class="health watch">有风险</span></div>
+              <h3>首次准备</h3>
+              <dl>
+                <dt>用户目标</dt><dd>确认系统没有卡住，并知道要等多久。</dd>
+                <dt>触点</dt><dd>首次调用 <code>run.py</code>。</dd>
+                <dt>实测</dt><dd>打开帮助也会准备依赖；耗时 9.34 秒，只显示一句提示。</dd>
+                <dt>机会</dt><dd>帮助不触发安装；真实任务显示阶段、完成态与重试建议。</dd>
+              </dl>
+              <div class="emotion">情绪：期待 → 不确定</div>
+            </article>
+
+            <article class="stage">
+              <div class="stage-index"><span>STEP 04</span><span class="health good">已恢复</span></div>
+              <h3>无账号搜索</h3>
+              <dl>
+                <dt>用户目标</dt><dd>不登录也能从两个来源获得候选。</dd>
+                <dt>触点</dt><dd><code>search --source all</code>。</dd>
+                <dt>复核</dt><dd>Z-Library 匿名搜索与 Anna 均成功；联合返回 6 条，Z-Library 在两个地址失败后自动切换。</dd>
+                <dt>机会</dt><dd>把域名轮换过程压缩为可理解的等待提示，避免长时间静默。</dd>
+              </dl>
+              <div class="emotion">情绪：有期待 → 得到候选</div>
+            </article>
+
+            <article class="stage">
+              <div class="stage-index"><span>STEP 05</span><span class="health unknown">未验证</span></div>
+              <h3>比较与选版</h3>
+              <dl>
+                <dt>用户目标</dt><dd>辨认哪一条才是正确语言、格式和版次。</dd>
+                <dt>触点</dt><dd>Agent 整理后的候选列表。</dd>
+                <dt>复核</dt><dd>Z-Library 实际返回版次、出版社、标识符和页数；Anna 仍以基础字段为主。</dd>
+                <dt>机会</dt><dd>统一双来源字段，增加译者与“元数据缺失”提示。</dd>
+              </dl>
+              <div class="emotion">情绪：可以比较，但跨来源信息不对称</div>
+            </article>
+
+            <article class="stage">
+              <div class="stage-index"><span>STEP 06</span><span class="health unknown">未验证</span></div>
+              <h3>下载与确认</h3>
+              <dl>
+                <dt>用户目标</dt><dd>只下载我选中的版本，并明确保存位置。</dd>
+                <dt>触点</dt><dd><code>download result_id</code>、Agent 回复。</dd>
+                <dt>实测</dt><dd>权限边界设计清楚；本次为避免产生下载未执行。</dd>
+                <dt>机会</dt><dd>明确默认目录；完成后提供路径、大小、来源和校验状态。</dd>
+              </dl>
+              <div class="emotion">情绪：设计上安心，运行未验证</div>
+            </article>
+
+            <article class="stage">
+              <div class="stage-index"><span>STEP 07</span><span class="health bad">较弱</span></div>
+              <h3>故障恢复与支持</h3>
+              <dl>
+                <dt>用户目标</dt><dd>无需理解内部实现就能恢复，或带着安全信息求助。</dd>
+                <dt>触点</dt><dd>错误 JSON、doctor、troubleshooting、SUPPORT。</dd>
+                <dt>实测</dt><dd>错误分类稳定，但建议包含占位符、内部命令和不存在的 README 小节。</dd>
+                <dt>机会</dt><dd>把诊断翻译成用户原因、系统动作、用户动作三层。</dd>
+              </dl>
+              <div class="emotion">情绪：挫败 → 需要外部帮助</div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="evidence">
+        <div class="section-head">
+          <div class="section-kicker">04 · Evidence</div>
+          <div>
+            <h2>截图与实测证据</h2>
+            <p class="section-desc">截图来自本次审计中实际打开并核验的 GitHub 页面；命令数据来自隔离的运行目录和配置目录，没有读取现有账号，也没有下载文件。</p>
+          </div>
+        </div>
+        <div class="evidence-grid">
+          <figure>
+            <img src="evidence/01-readme-entry.jpg" alt="GitHub README 中文首屏，展示能力、快速安装和自然语言用法">
+            <figcaption><strong>证据 01 · 理解与进入</strong><p>README 首屏先回答“能做什么、如何安装、装好后怎样说”，任务导向清楚。中英文完整重复使页面整体长度接近翻倍。</p></figcaption>
+          </figure>
+          <figure>
+            <img src="evidence/02-install-guide.jpg" alt="GitHub 安装与迁移文档首屏，展示推荐指令和项目组件说明">
+            <figcaption><strong>证据 02 · 安装回退</strong><p>推荐请求保持一句话，方向正确；手动路径同时承载安装、验证、迁移、环境和验收，普通用户需要自行判断所处场景。</p></figcaption>
+          </figure>
+          <figure>
+            <img src="evidence/03-support-recovery.jpg" alt="GitHub 支持文档首屏，展示 doctor 命令和提交问题前的脱敏要求">
+            <figcaption><strong>证据 03 · 故障恢复</strong><p>安全提醒完整，但可复制命令仍包含 <code>{baseDir}</code>；文档要求阅读 README 中并不存在的“域名变化与网络边界”小节。</p></figcaption>
+          </figure>
+          <article class="panel">
+            <h3>代码与文档交叉核验</h3>
+            <ul>
+              <li><code>RUNNER_COMMAND</code> 在执行器中被固定为 <code>python3 {baseDir}/scripts/run.py</code>，因此占位符会进入真实错误建议。</li>
+              <li>默认下载目录在实现中是 <code>~/Books</code>，但 README 与 Skill 没有形成明确的默认行为约定。</li>
+              <li>INSTALL 要求迁移到 README 列出的 <code>ZLIB_SKILL_*</code>，README 实际没有列出这些变量。</li>
+              <li>人类搜索表固定 110 列并截断标题/作者，不利于窄终端和辅助技术。</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="run-data">
+          <h3>本次真实运行摘要</h3>
+          <table class="run-table">
+            <thead><tr><th>状态</th><th>结果</th><th>体验含义</th></tr></thead>
+            <tbody>
+              <tr><td><code>--help</code>（干净运行目录）</td><td>9.34 秒；先显示 “Preparing…”</td><td>查看帮助也触发依赖准备，且没有阶段反馈。</td></tr>
+              <tr><td><code>auth status --json</code></td><td>0.26 秒；无 token</td><td>隔离配置工作正常，没有读取既有账号。</td></tr>
+              <tr><td><code>doctor --json</code>（修复前）</td><td>2.46 秒；两个来源均 unavailable；顶层 <code>ok: true</code></td><td>保留为诊断语义问题的基线证据。</td></tr>
+              <tr><td><code>doctor --json</code>（修复后）</td><td>Z-Library anonymous、Anna 200；两者 <code>can_search: true</code></td><td>无账号核心入口恢复，且未开启普通私网放行。</td></tr>
+              <tr><td><code>search ... --source all</code>（修复后）</td><td>6 条候选；Z-Library 3、Anna 3</td><td>两个来源都真正完成了搜索，而非只通过健康检查。</td></tr>
+              <tr><td>地址切换复核</td><td>Z-Library 前两个域名搜索失败，第三个成功；Anna 预置 <code>.gl/.pk/.gd</code></td><td>运行时故障切换已成立；不是单一硬编码地址。</td></tr>
+              <tr><td>Anna 网络检查</td><td><code>annas-archive.gl → 198.18.2.231</code>，修复后 200</td><td>只对可信 HTTPS 来源接受代理 fake-IP；普通私网仍被测试证明会拒绝。</td></tr>
+              <tr><td>非法年份范围</td><td><code>INVALID_FILTER</code>，recoverable</td><td>输入错误分类清楚，是值得保留的模式。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="issues">
+        <div class="section-head">
+          <div class="section-kicker">05 · Findings</div>
+          <div>
+            <h2>问题清单与优先级</h2>
+            <p class="section-desc">P0 表示本次环境中阻断核心任务；P1 表示显著影响成功率或信任；P2 表示结构性摩擦和可访问性风险。</p>
+          </div>
+        </div>
+        <div class="issue-list">
+          <article class="issue">
+            <div><span class="priority p0">P0 · 已修复</span></div>
+            <div><h3>无账号后备路径在系统代理 / fake-IP 环境中可能完全失效</h3><p>修复采用窄范围信任：Z-Library 支持匿名搜索并合并域名发现结果，Anna 轮换官方三个地址；只有可信 HTTPS 主机可接受 198.18.0.0/15 fake-IP，普通私网、字面 IP 和陌生重定向仍被阻止。</p></div>
+            <div class="issue-meta"><span><strong>复核：</strong>doctor 双来源可用；联合搜索 6 条</span><span><strong>回归：</strong>可信 fake-IP、普通私网、陌生跳转分别覆盖</span><span><strong>状态：</strong>当前环境关闭</span></div>
+          </article>
+
+          <article class="issue">
+            <div><span class="priority p1">P1</span></div>
+            <div><h3>首次准备过程缺少可感知反馈，连帮助页也要付出等待成本</h3><p>干净运行目录下 <code>--help</code> 用时 9.34 秒。用户只看到一句 “Preparing the zlib-skill runtime...”，不知道是在建环境、装依赖、验证，还是已经卡住。真实网络较慢时，最长准备超时可到 300 秒。</p></div>
+            <div class="issue-meta"><span><strong>影响：</strong>首用放弃、重复操作</span><span><strong>证据：</strong>Step 03</span><span><strong>建议：</strong>帮助绕过准备；真实任务显示阶段</span></div>
+          </article>
+
+          <article class="issue">
+            <div><span class="priority p1">P1</span></div>
+            <div><h3>恢复建议违背“用户不需要懂命令”的产品承诺</h3><p>错误与支持文档向用户暴露 <code>{baseDir}</code>、<code>--json</code>、<code>ANNAS_BASE_URL</code>、<code>HTTPS_PROXY</code> 等内部术语；搜索失败还默认建议登录 Z-Library，与“不会为了更多结果要求登录”的叙事形成冲突。</p></div>
+            <div class="issue-meta"><span><strong>影响：</strong>恢复失败、信任下降</span><span><strong>证据：</strong>Step 07 / Support</span><span><strong>建议：</strong>结构化 next_actions，由 Agent 翻译</span></div>
+          </article>
+
+          <article class="issue">
+            <div><span class="priority p1">P1</span></div>
+            <div><h3>诊断“执行成功”和“产品健康”没有分层</h3><p>在两个来源都不可用时，<code>doctor</code> 仍返回顶层 <code>ok: true</code>。这对协议层或许表示命令完成，但 Agent 很容易把它解释为系统健康，或者需要遍历深层 sources 才能得出真实结论。</p></div>
+            <div class="issue-meta"><span><strong>影响：</strong>错误总结、错误下一步</span><span><strong>证据：</strong>doctor 实测</span><span><strong>建议：</strong>增加 overall_status / usable</span></div>
+          </article>
+
+          <article class="issue">
+            <div><span class="priority p1">P1</span></div>
+            <div><h3>候选版本的“身份信息”仍不对称，跨来源比较容易失真</h3><p>Z-Library 结果已补充标识符（含 ISBN）、出版社、版次和页数，真实候选可以区分初版与第三版；Anna 的 HTML 结果仍只有基础字段。当前也没有统一的“字段缺失/可信度低”提示。</p></div>
+            <div class="issue-meta"><span><strong>影响：</strong>Anna 候选仍可能选错版本</span><span><strong>证据：</strong>Step 05 / 真实候选</span><span><strong>建议：</strong>统一字段与元数据置信度</span></div>
+          </article>
+
+          <article class="issue">
+            <div><span class="priority p2">P2</span></div>
+            <div><h3>文档交叉引用失效，用户在最需要帮助时找不到所指内容</h3><p>SUPPORT 要求阅读 README 的“域名变化与网络边界”，但 README 没有该小节；INSTALL 要求迁移到 README 列出的 <code>ZLIB_SKILL_*</code>，README 也没有相应列表。文档分别都像是完整的，跨文档旅程却断开了。</p></div>
+            <div class="issue-meta"><span><strong>影响：</strong>增加支持成本</span><span><strong>证据：</strong>README / INSTALL / SUPPORT</span><span><strong>建议：</strong>链接到具体锚点并做文档测试</span></div>
+          </article>
+
+          <article class="issue">
+            <div><span class="priority p2">P2</span></div>
+            <div><h3>默认下载位置没有形成清楚、稳定的用户约定</h3><p>实现默认写入 <code>~/Books</code>，README 示例却总是显式指定 Downloads；Skill 的下载模板要求传入目录，但没有说明用户未指定时该问一次还是使用默认值。不同 Agent 可能给出不同体验。</p></div>
+            <div class="issue-meta"><span><strong>影响：</strong>文件找不到、重复确认</span><span><strong>证据：</strong>Step 06 / code</span><span><strong>建议：</strong>明确默认并在成功前后复述</span></div>
+          </article>
+
+          <article class="issue">
+            <div><span class="priority p2">P2</span></div>
+            <div><h3>双语与终端输出存在扫描和辅助技术负担</h3><p>README、INSTALL、SUPPORT 采用中英逐段重复，屏幕阅读器会连续朗读两种语言，页面长度也接近翻倍。人类搜索表固定 110 列、标题和作者直接截断，没有换行或省略提示；窄终端和放大场景难以比较。</p></div>
+            <div class="issue-meta"><span><strong>影响：</strong>阅读效率、低视力体验</span><span><strong>证据：</strong>文档截图 / print_search_table</span><span><strong>建议：</strong>语言分流；自适应行式结果</span></div>
+          </article>
+        </div>
+
+        <div class="callout">
+          <p><strong>本次修复没有整体放宽 URL 检查。</strong>它只允许可信内置来源的 HTTPS 主机使用 198.18.0.0/15 代理 fake-IP；普通私网、localhost、字面非公网 IP 与未获信任的跳转继续拒绝。这一边界已由独立回归测试覆盖。</p>
+        </div>
+      </section>
+
+      <section id="accessibility">
+        <div class="section-head">
+          <div class="section-kicker">06 · Accessibility</div>
+          <div>
+            <h2>可访问性风险</h2>
+            <p class="section-desc">本节只能报告从页面结构、文案和终端格式中可见的风险，不能据此声称符合或不符合完整 WCAG。</p>
+          </div>
+        </div>
+        <div class="access-grid">
+          <article class="panel verdict">
+            <h3>可确认的优点</h3>
+            <ul>
+              <li>GitHub 渲染后的文档具有清楚的标题、列表和代码块结构。</li>
+              <li>关键状态不只靠颜色表达，错误码和文字同时存在。</li>
+              <li>错误对象包含 recoverable 与 suggestions，为辅助呈现保留了语义。</li>
+              <li>密码不在聊天和日志中传递，减少辅助技术暴露敏感信息的风险。</li>
+            </ul>
+          </article>
+          <article class="panel">
+            <h3>需要验证与改进</h3>
+            <ul>
+              <li><strong>语言：</strong>中英逐段混排缺少页面级语言切换；读屏会反复切换语言模型。</li>
+              <li><strong>重排：</strong>固定 110 列终端表无法适应 200% 放大或窄宽度，长标题被静默截断。</li>
+              <li><strong>状态变化：</strong>运行环境准备没有阶段更新；在聊天界面中也应测试等待状态是否被读屏宣告。</li>
+              <li><strong>错误恢复：</strong>密集 JSON 与内部命令增加认知负担；应有一段自然语言摘要和一个明确下一动作。</li>
+              <li><strong>键盘/读屏：</strong>Agent 宿主的候选列表、编号选择和下载确认未在本次审计中测试。</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="roadmap">
+        <div class="section-head">
+          <div class="section-kicker">07 · Roadmap</div>
+          <div>
+            <h2>改进路线</h2>
+            <p class="section-desc">先修核心可用性与错误语义，再提升选版质量，最后用真实用户研究校准。每一项都尽量给出可验证的完成标准。</p>
+          </div>
+        </div>
+        <div class="roadmap">
+          <article class="roadmap-col">
+            <span class="timing">NOW · 1 周</span>
+            <h3>让用户能继续走</h3>
+            <ol>
+              <li><strong>已完成：</strong>可信来源兼容 198.18.0.0/15 fake-IP，普通私网安全保护保持不变。</li>
+              <li><code>-h/--help</code> 和顶层无参数输出不触发运行环境准备。</li>
+              <li>替换所有面向用户的 <code>{baseDir}</code>；修复 SUPPORT 与 INSTALL 的失效引用。</li>
+              <li>搜索失败不默认建议登录，除非用户明确要求 Z-Library。</li>
+            </ol>
+          </article>
+          <article class="roadmap-col">
+            <span class="timing">NEXT · 2–4 周</span>
+            <h3>让 Agent 能正确解释</h3>
+            <ol>
+              <li>doctor 增加 <code>overall_status</code>、<code>usable_source_count</code> 与结构化 <code>next_actions</code>。</li>
+              <li>首次准备显示“创建环境 / 安装依赖 / 验证完成”，并在聊天中合并为简短进度。</li>
+              <li>候选结果增加 ISBN、出版社、版次、译者或元数据缺失标记；提供详情展开。</li>
+              <li>明确未指定输出目录时的产品约定，并在下载前后复述。</li>
+            </ol>
+          </article>
+          <article class="roadmap-col">
+            <span class="timing">LATER · 1–2 月</span>
+            <h3>让体验可持续优化</h3>
+            <ol>
+              <li>拆分中英文档，以页面顶部互链代替逐段重复。</li>
+              <li>将人类搜索输出改为编号、换行、全标题的自适应格式。</li>
+              <li>在 macOS 系统代理、Clash fake-IP、Windows、Linux ARM 上做干净环境旅程测试。</li>
+              <li>引入匿名、可选的失败类别统计，验证最常见的阻塞点。</li>
+            </ol>
+          </article>
+        </div>
+
+        <table class="acceptance">
+          <thead><tr><th>改进主题</th><th>建议验收标准</th></tr></thead>
+          <tbody>
+            <tr><td>首次准备</td><td>干净环境执行 <code>--help</code> 在 500ms 内返回；真实任务每 10 秒内至少出现一次可理解的状态更新。</td></tr>
+            <tr><td>核心搜索</td><td><strong>当前环境已达成成功路径：</strong>无账号双来源搜索成功，且 Z-Library 在搜索阶段自动切换失效域名；仍需补充所有地址失败时的专门错误语义。</td></tr>
+            <tr><td>诊断语义</td><td>两个来源都不可用时，<code>overall_status = "unusable"</code>；Agent 不需要推断深层字段即可准确总结。</td></tr>
+            <tr><td>恢复建议</td><td>所有用户可见输出不再包含 <code>{baseDir}</code>；自然语言用户无需复制 JSON 命令完成标准恢复。</td></tr>
+            <tr><td>候选选择</td><td>同名多版本测试集中，用户能在不打开来源站点的情况下正确选择目标版本；缺失元数据被显式标注。</td></tr>
+            <tr><td>文档</td><td>自动检查本地链接和锚点；README、INSTALL、SUPPORT 之间没有失效引用。</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="research">
+        <div class="section-head">
+          <div class="section-kicker">08 · Research plan</div>
+          <div>
+            <h2>下一轮体验研究建议</h2>
+            <p class="section-desc">当前审计能找到结构问题，但无法代替真实用户。建议用 5–7 名目标用户做短程任务测试，覆盖熟悉命令行与完全不熟悉的两组。</p>
+          </div>
+        </div>
+        <div class="research-plan">
+          <article class="panel">
+            <h3>建议任务</h3>
+            <ol>
+              <li>第一次看到仓库，判断是否值得安装，并完成安装请求。</li>
+              <li>无 Z-Library 账号，寻找一本公版书的英文 EPUB。</li>
+              <li>只记得部分书名，辨认正确作品。</li>
+              <li>面对三个相似版本，选择指定版次或译本。</li>
+              <li>人为制造来源不可用，观察能否独立恢复或正确求助。</li>
+              <li>下载成功后，找到本地文件并解释为什么相信它是正确版本。</li>
+            </ol>
+          </article>
+          <article class="panel">
+            <h3>核心衡量指标</h3>
+            <div class="metric-list">
+              <div class="metric-chip">首次有效候选时间</div>
+              <div class="metric-chip">无账号任务成功率</div>
+              <div class="metric-chip">错误版次选择率</div>
+              <div class="metric-chip">无需人工支持的恢复率</div>
+              <div class="metric-chip">对下载结果的信心</div>
+              <div class="metric-chip">敏感信息误发率</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="limits">
+        <div class="section-head">
+          <div class="section-kicker">09 · Limits</div>
+          <div>
+            <h2>证据边界</h2>
+            <p class="section-desc">以下内容没有在本次审计中直接验证，报告已将相关阶段标为“未验证”或“风险”。</p>
+          </div>
+        </div>
+        <div class="limits">
+          <ul>
+            <li>没有使用真实 Z-Library 账号，没有验证登录、token 续期和账号限制。</li>
+            <li>修复后已获得两个来源的真实候选列表，但没有进入下载流程。</li>
+            <li>为了避免产生文件与版权风险，没有执行任何电子书下载。</li>
+            <li>本机界面捕获能力不可用，命令行证据以本次真实输出和耗时记录呈现，不以终端截图冒充。</li>
+            <li>没有在实际 Agent 宿主中测试候选列表的视觉、键盘、读屏和跨轮次编号映射。</li>
+            <li>没有进行真实用户访谈、可用性测试或统计分析；优先级基于核心任务影响和本次环境证据。</li>
+            <li>已在隔离虚拟环境运行相关测试；下载、真实账号登录和不同操作系统仍需额外验证。</li>
+          </ul>
+          <pre aria-label="本次审计命令摘要"># 隔离运行目录与配置目录；无登录、无下载
+python3 scripts/run.py --help
+python3 scripts/run.py auth status --json
+python3 scripts/run.py doctor --json
+python3 scripts/run.py search "Pride and Prejudice" \
+  --source all --ext epub --lang en --limit 5 --json</pre>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p>初版生成于 2026-08-06，修复复核于 2026-08-07。审计对象：zlib-skill 0.3.1 工作树。本报告只评估用户体验与可访问性风险，不评价上游内容来源的合法性、可用性或商业策略。</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

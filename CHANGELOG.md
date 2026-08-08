@@ -6,6 +6,21 @@
 This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Breaking
 changes may occur during `0.x`.
 
+## Unreleased
+
+### Fixed / 修复
+
+- Z-Library 搜索改为支持无账号匿名请求；账号仅影响下载与账号功能 / Enabled anonymous
+  Z-Library search; authentication now gates downloads and account-only features rather than
+  search.
+- 合并两个 Z-Library 域名发现入口，并在实际搜索失败时切换下一可信域名 / Unioned both
+  Z-Library discovery endpoints and retry the next trusted domain when a search request fails.
+- Anna's Archive 自动轮换官方 `.gl`、`.pk`、`.gd` 地址，搜索与下载链接解析共用后备链 /
+  Added automatic failover across the official Anna's Archive `.gl`, `.pk`, and `.gd` origins for
+  search and download-link resolution.
+- 在不放开普通私网的前提下兼容代理的 `198.18.0.0/15` fake-IP / Added narrowly scoped proxy
+  fake-IP compatibility for trusted sources without allowing ordinary private-network targets.
+
 ## 0.3.1 - 2026-08-06
 
 ### Changed / 调整

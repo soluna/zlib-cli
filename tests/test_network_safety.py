@@ -46,6 +46,40 @@ def test_validate_http_url_rejects_hostname_resolving_private(monkeypatch):
             validate_http_url("https://mirror.example/book.pdf")
 
 
+def test_validate_http_url_allows_proxy_fake_ip_for_trusted_https_host(monkeypatch):
+    monkeypatch.delenv("ZLIB_SKILL_ALLOW_PRIVATE_NETWORK", raising=False)
+    fake_ip_dns = [(2, 1, 6, "", ("198.18.2.231", 443))]
+
+    with patch("zlib_anna.network_safety.socket.getaddrinfo", return_value=fake_ip_dns):
+        result = validate_http_url(
+            "https://annas-archive.gl/search?q=python",
+            trusted_proxy_hosts={"annas-archive.gl"},
+        )
+
+    assert result == "https://annas-archive.gl/search?q=python"
+
+
+def test_validate_http_url_rejects_proxy_fake_ip_for_untrusted_host(monkeypatch):
+    monkeypatch.delenv("ZLIB_SKILL_ALLOW_PRIVATE_NETWORK", raising=False)
+    fake_ip_dns = [(2, 1, 6, "", ("198.18.2.231", 443))]
+
+    with patch("zlib_anna.network_safety.socket.getaddrinfo", return_value=fake_ip_dns):
+        with pytest.raises(UnsafeUrlError):
+            validate_http_url("https://unknown.example/book.pdf")
+
+
+def test_validate_http_url_rejects_regular_private_ip_even_for_trusted_host(monkeypatch):
+    monkeypatch.delenv("ZLIB_SKILL_ALLOW_PRIVATE_NETWORK", raising=False)
+    private_dns = [(2, 1, 6, "", ("192.168.1.10", 443))]
+
+    with patch("zlib_anna.network_safety.socket.getaddrinfo", return_value=private_dns):
+        with pytest.raises(UnsafeUrlError):
+            validate_http_url(
+                "https://annas-archive.gl/search?q=python",
+                trusted_proxy_hosts={"annas-archive.gl"},
+            )
+
+
 def test_private_network_requires_explicit_opt_in(monkeypatch):
     monkeypatch.setenv("ZLIB_SKILL_ALLOW_PRIVATE_NETWORK", "1")
 
@@ -104,6 +138,31 @@ def test_safe_get_allows_validated_public_redirect(monkeypatch):
 
     assert response is final
     assert session.get.call_count == 2
+
+
+def test_safe_get_does_not_extend_fake_ip_trust_to_unknown_redirect(monkeypatch):
+    monkeypatch.delenv("ZLIB_SKILL_ALLOW_PRIVATE_NETWORK", raising=False)
+    session = MagicMock()
+    redirect = MagicMock()
+    redirect.status_code = 302
+    redirect.headers = {"location": "https://unknown.example/file.pdf"}
+    redirect.url = "https://annas-archive.gl/start"
+    session.get.return_value = redirect
+
+    def fake_dns(hostname, *_args, **_kwargs):
+        address = "198.18.2.231" if hostname == "annas-archive.gl" else "198.18.2.232"
+        return [(2, 1, 6, "", (address, 443))]
+
+    with patch("zlib_anna.network_safety.socket.getaddrinfo", side_effect=fake_dns):
+        with pytest.raises(UnsafeUrlError):
+            safe_get(
+                session,
+                "https://annas-archive.gl/start",
+                trusted_proxy_hosts={"annas-archive.gl"},
+            )
+
+    session.get.assert_called_once()
+    redirect.close.assert_called_once()
 
 
 def test_url_origin_removes_path_query_and_fragment():
